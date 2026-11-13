@@ -1,0 +1,139 @@
+<vbox id="zotero-ia-prefs" onload="Zotero.ZoteroIA.initPrefs(document)">
+ <html:div class="zia-wrap">
+  <html:style>
+    .zia-wrap { max-width:780px; box-sizing:border-box; padding:6px 16px 22px 4px; color:var(--fill-primary, CanvasText); --zia-border:var(--material-border, color-mix(in srgb, CanvasText 18%, transparent)); --zia-accent:var(--accent-blue, AccentColor); --zia-soft:color-mix(in srgb,var(--zia-accent) 9%, transparent); }
+    .zia-wrap [hidden] { display:none !important; }
+    .zia-h { font-size:15px; font-weight:600; margin:4px 0 2px; }
+    .zia-sub { opacity:.75; margin:0 0 10px; }
+    .zia-cards { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; margin-bottom:12px; }
+    .zia-card { border:1px solid var(--zia-border); border-radius:11px; padding:13px 14px; cursor:pointer; min-height:64px; box-sizing:border-box; }
+    .zia-card:hover { border-color:var(--zia-accent); }
+    .zia-card.on { border:2px solid var(--zia-accent); background:var(--zia-soft); padding:9px 11px; }
+    .zia-card-t { display:block; font-weight:600; margin-bottom:4px; }
+    .zia-card-d { display:block; opacity:.7; font-size:11px; line-height:1.35; }
+    .zia-steps { border:1px solid var(--zia-border); border-radius:10px; padding:10px 14px; margin-bottom:12px; }
+    .zia-steps ol { margin:6px 0; padding-left:20px; } .zia-steps li { margin:4px 0; }
+    .zia-note { opacity:.7; font-size:11px; margin:6px 0 0; }
+    .zia-row { display:grid; grid-template-columns:200px minmax(0,1fr); align-items:center; gap:10px; margin:8px 0; }
+    .zia-row input[type=text], .zia-row input[type=password], .zia-row select { width:100%; box-sizing:border-box; padding:4px 6px; }
+    .zia-row input[type=checkbox] { justify-self:start; width:auto; margin:0; }
+    .zia-actions { display:flex; align-items:center; gap:10px; margin:10px 0; flex-wrap:wrap; }
+    #zia-test-result { display:block; width:100%; white-space:pre-line; overflow-wrap:anywhere; font-size:12px; line-height:1.5; }
+    #zia-free-policy { border-left:3px solid var(--zia-accent); padding:8px 12px; margin:12px 0; }
+    .zia-confirm { display:flex; align-items:flex-start; gap:8px; margin:10px 0; font-size:12px; line-height:1.4; }
+    .zia-confirm input { flex-shrink:0; min-height:0 !important; margin-top:3px; }
+    @media (max-width:620px) { .zia-cards { grid-template-columns:1fr; } .zia-row { grid-template-columns:1fr; gap:4px; } }
+    .zia-ok { color:#1d7a35; font-weight:600; } .zia-bad { color:#c62828; }
+    details { margin-top:14px; } summary { cursor:pointer; opacity:.85; }
+    .zia-wrap textarea { width:100%; box-sizing:border-box; border-radius:8px; border:1px solid var(--zia-border); background:var(--material-background, Canvas);color:inherit;padding:9px; } .zia-wrap input,.zia-wrap select {background:var(--material-background, Canvas);color:inherit;border:1px solid var(--zia-border);border-radius:7px;min-height:28px;} .zia-wrap button {border-radius:7px;min-height:29px;} .zia-wrap :focus-visible {outline:2px solid var(--zia-accent);outline-offset:2px;}
+  </html:style>
+
+  <html:div class="zia-h">¿Con qué IA quieres trabajar?</html:div>
+  <html:p class="zia-sub">Elige la opción que más te acomode. Puedes cambiarla cuando quieras.</html:p>
+
+  <html:div class="zia-cards">
+    <html:div class="zia-card" role="button" tabindex="0" data-mode="local"><html:span class="zia-card-t">💻 Gratis, en mi computadora</html:span><html:span class="zia-card-d">Privado y sin internet. Necesitas instalar un programa. Más lento.</html:span></html:div>
+    <html:div class="zia-card" role="button" tabindex="0" data-mode="gemini"><html:span class="zia-card-t">🌐 Usar IA gratis</html:span><html:span class="zia-card-d">Conecta Gemini o Z.ai con tu propia clave.</html:span></html:div>
+    <html:div class="zia-card" role="button" tabindex="0" data-mode="paid"><html:span class="zia-card-t">⚙ Usar una API de pago</html:span><html:span class="zia-card-d">API de pago opcional, con facturación independiente.</html:span></html:div>
+  </html:div>
+
+  <html:div class="zia-steps" id="zia-steps-local" hidden="hidden">
+    <html:b>Pasos (una sola vez):</html:b>
+    <html:ol>
+      <html:li>Descarga e instala <html:a href="https://ollama.com/download">Ollama</html:a>.</html:li>
+      <html:li>Abre Ollama y descarga un modelo. Recomendado: <html:code>qwen3</html:code> (escribe en Ollama: <html:code>ollama pull qwen3</html:code>).</html:li>
+      <html:li>Deja Ollama abierto y pulsa <html:b>Probar conexión</html:b>.</html:li>
+    </html:ol>
+  </html:div>
+  <html:div class="zia-steps" id="zia-steps-gemini" hidden="hidden">
+    <html:div class="zia-row"><html:label>Servicio:</html:label>
+      <html:select id="zia-free">
+        <html:option value="gemini">Google Gemini</html:option>
+        <html:option value="zai">Z.ai — GLM (alternativo)</html:option>
+      </html:select>
+    </html:div>
+    <html:div id="zia-free-gemini">
+      <html:b>Pasos (2 minutos):</html:b>
+      <html:ol>
+        <html:li>Entra a <html:a href="https://aistudio.google.com/apikey">Google AI Studio</html:a> con tu cuenta de Google.</html:li>
+        <html:li>Pulsa <html:b>Create API key</html:b> y copia la clave.</html:li>
+        <html:li>Revisa en <html:a href="https://aistudio.google.com/projects">Google AI Studio</html:a> que el proyecto de tu clave diga <html:b>Free o Free Tier</html:b> (gratuito).</html:li>
+        <html:li>Pega la clave abajo, confirma que no has activado pagos y pulsa <html:b>Comprobar conexión</html:b>.</html:li>
+      </html:ol>
+    </html:div>
+    <html:div id="zia-free-zai" hidden="hidden">
+      <html:b>Pasos (2 minutos):</html:b>
+      <html:ol>
+        <html:li>Crea una cuenta en <html:a href="https://z.ai/manage-apikey/apikey-list">z.ai</html:a> y entra a <html:b>API Keys</html:b>.</html:li>
+        <html:li>Crea una clave <html:b>Standard</html:b> de la API general y cópiala.</html:li>
+        <html:li>Pégala abajo y pulsa <html:b>Comprobar conexión</html:b>.</html:li>
+      </html:ol>
+    </html:div>
+    <html:p class="zia-note">En los planes gratuitos, el proveedor puede usar lo que envías. No lo uses con textos inéditos o sensibles.</html:p>
+  </html:div>
+  <html:div class="zia-steps" id="zia-steps-paid" hidden="hidden">
+    <html:div class="zia-row"><html:label>Servicio:</html:label>
+      <html:select id="zia-paid">
+        <html:option value="openai">OpenAI (ChatGPT)</html:option>
+        <html:option value="claude">Anthropic (Claude)</html:option>
+        <html:option value="deepseek">DeepSeek</html:option>
+        <html:option value="openrouter">OpenRouter (muchos modelos)</html:option>
+        <html:option value="gemini">Gemini — con pagos activados</html:option>
+        <html:option value="zai">Z.ai — API de pago</html:option>
+      </html:select>
+    </html:div>
+    <html:div id="zia-paid-help"></html:div>
+    <html:p class="zia-note">La API tiene facturación independiente de la suscripción al chat. Este modo permite elegir modelos manualmente y puede generar cargos según tu cuenta.</html:p>
+  </html:div>
+
+  <html:div class="zia-row" id="zia-key-row" hidden="hidden">
+    <html:label>Pega tu clave aquí:</html:label>
+    <html:input type="password" id="zia-apiKey" placeholder="Empieza con algo como AIza… o sk-…"/>
+  </html:div>
+
+  <html:div id="zia-free-policy" hidden="hidden">
+    <html:b>Antes de comenzar</html:b>
+    <html:div id="zia-gemini-confirm-row">
+      <html:p>Para usar Gemini gratis, utiliza una clave creada sin activar pagos en Google.</html:p>
+      <html:div class="zia-confirm">
+        <html:input type="checkbox" id="zia-free-confirmed"/>
+        <html:label for="zia-free-confirmed">No he activado pagos para esta clave de Gemini.</html:label>
+      </html:div>
+      <html:details>
+        <html:summary>¿Cómo lo compruebo?</html:summary>
+        <html:ol>
+          <html:li>Abre <html:a href="https://aistudio.google.com/projects">Google AI Studio</html:a> y localiza el proyecto al que pertenece tu clave.</html:li>
+          <html:li>Si aparece <html:b>Free</html:b> o <html:b>Free Tier</html:b>, significa que es gratuito.</html:li>
+          <html:li>Si aparece <html:b>Paid</html:b>, significa que tiene pagos activados. Para usar la opción gratuita, elige una clave de otro proyecto que indique Free o Free Tier.</html:li>
+        </html:ol>
+        <html:p class="zia-note">El plugin comprueba que la clave funciona; no puede consultar ni cambiar tus pagos en Google.</html:p>
+      </html:details>
+    </html:div>
+    <html:div class="zia-row"><html:label for="zia-detected-model">Modelo elegido:</html:label><html:select id="zia-detected-model"/></html:div>
+    <html:p id="zia-policy-status" class="zia-note"/>
+    <html:details><html:summary>Ver información de los modelos y límites</html:summary>
+    <html:p class="zia-note">Lista de precios revisada el 6 de noviembre de 2026: <html:a href="https://ai.google.dev/gemini-api/docs/pricing">Gemini</html:a> · <html:a href="https://docs.z.ai/guides/overview/pricing">Z.ai</html:a>. No se añaden modelos desconocidos ni alias «latest». Google Search Grounding está desactivado en este modo. La comprobación usa consultas breves sin leer ni modificar tu biblioteca.</html:p>
+    <html:p class="zia-note">La comprobación se conserva al reiniciar. Debes repetirla si cambias la configuración o se pierde el acceso. La disponibilidad, la cuota y la facturación dependen del proveedor; esta comprobación no las garantiza.</html:p>
+    </html:details>
+  </html:div>
+
+  <html:div class="zia-actions">
+    <html:button id="zia-test">Probar conexión</html:button>
+    <html:span id="zia-test-result"></html:span>
+  </html:div>
+
+  <html:details id="zia-diagnostics"><html:summary>Ver detalles de la conexión</html:summary><html:p id="zia-test-details" style="white-space:pre-line;overflow-wrap:anywhere;font-size:12px"/></html:details>
+
+  <html:details>
+    <html:summary>Opciones avanzadas</html:summary>
+    <html:button id="zia-detect" hidden="hidden">Actualizar lista de modelos</html:button>
+    <html:div class="zia-row"><html:label>Dirección (URL):</html:label><html:input type="text" id="zia-baseURL"/></html:div>
+    <html:div class="zia-row"><html:label>Modelo:</html:label><html:input type="text" id="zia-model"/></html:div>
+    <html:div class="zia-row"><html:label>Clave OpenAlex (opcional, para buscar más):</html:label><html:input type="password" id="zia-openalexKey" placeholder="Gratis en openalex.org; sin clave también funciona"/></html:div>
+    <html:div class="zia-row"><html:label>Texto por parte de lectura (0 = automático):</html:label><html:input type="number" id="zia-maxChars" style="width:110px"/></html:div>
+    <html:div class="zia-row"><html:label>Acciones habituales solicitadas sin confirmaciones repetitivas: crear o renombrar colecciones, guardar notas y agregar referencias, etiquetas o vínculos a colecciones en lotes de hasta 20 registros. Los lotes mayores, las correcciones de metadatos, las propuestas de cambios y las operaciones destructivas requieren autorización.</html:label></html:div>
+    <html:label>Instrucciones para la IA:</html:label>
+    <html:textarea id="zia-systemPrompt" rows="4"></html:textarea>
+  </html:details>
+ </html:div>
+</vbox>

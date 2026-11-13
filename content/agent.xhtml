@@ -1,0 +1,329 @@
+<?xml version='1.0' encoding='utf-8'?>
+<window xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" xmlns:html="http://www.w3.org/1999/xhtml" windowtype="zotero-ia:agent" title="Zotero IA · Investigación" width="1080" height="780">
+  <html:style>
+    :root { color-scheme: light dark; --zia-bg: var(--material-background, Canvas); --zia-text: var(--fill-primary, CanvasText); --zia-muted: var(--fill-secondary, GrayText); --zia-edge: var(--material-border, color-mix(in srgb, CanvasText 16%, transparent)); --zia-accent: var(--accent-blue, AccentColor); --zia-soft: color-mix(in srgb, var(--zia-accent) 9%, var(--zia-bg)); --zia-hover: color-mix(in srgb, var(--zia-accent) 14%, var(--zia-bg)); }
+    html, body, window { font: 13px system-ui, 'Segoe UI', sans-serif; color:var(--zia-text); background:var(--zia-bg); }
+    #wrap { display:flex; flex-direction:column; height:100vh; box-sizing:border-box; gap:0; min-width:340px; overflow:auto; }
+    #header {display:flex;align-items:center;gap:11px;padding:15px 18px 13px;border-bottom:1px solid var(--zia-edge);}
+    #brand {width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:750;color:var(--zia-accent);background:var(--zia-soft);border:1px solid var(--zia-edge);}
+    #headtitle {font-weight:700;font-size:15px;letter-spacing:-.2px;} #headsub {color:var(--zia-muted);font-size:11px;margin-top:2px;}
+    #header, #setup, #research-controls, #composer { flex:none; }
+    #research-panel {
+      flex:2 1 0; min-height:88px; min-width:0; overflow-y:scroll;
+      scrollbar-width:auto; scrollbar-gutter:stable;
+      padding:12px 18px; border-bottom:1px solid var(--zia-edge);
+    }
+    #research-panel[hidden] { display:none !important; }
+    #log { flex:1 1 0; overflow:auto; padding:16px 18px 20px; user-select:text; min-height:100px; }
+    #composer {padding:11px 18px 14px;border-top:1px solid var(--zia-edge);background:var(--zia-bg);}
+    .u {background:var(--zia-soft);border:1px solid var(--zia-edge);border-radius:12px 12px 4px 12px;padding:11px 13px;margin:12px 0 12px 44px;white-space:pre-wrap;line-height:1.5;overflow-wrap:anywhere;}
+    .a {margin:12px 0;line-height:1.6;overflow-wrap:anywhere;} .a table {border-collapse:collapse;margin:8px 0;max-width:100%;} .a td,.a th {border:1px solid var(--zia-edge);padding:6px 8px;vertical-align:top;}
+    .t {color:var(--zia-muted);font-size:11px;margin:7px 0;line-height:1.5;} .e {color:var(--color-red, #c94b4b);font-size:12px;margin:10px 0;}
+    .ask {border:1px solid var(--zia-edge);border-left:3px solid var(--zia-accent);background:var(--zia-soft);border-radius:9px;padding:12px;margin:11px 0;line-height:1.5;overflow-wrap:anywhere;}
+    .ask button {margin:10px 8px 0 0;} .ask details {margin-top:8px;} .ask pre {max-height:130px;overflow:auto;}
+    .graph-panel {border:1px solid color-mix(in srgb, var(--zia-edge) 85%, #90a4b2 15%);border-radius:14px;padding:14px;margin:12px 0;background:linear-gradient(180deg,var(--zia-bg),color-mix(in srgb,var(--zia-bg) 92%, var(--zia-soft) 8%));box-shadow:0 6px 18px rgba(0,0,0,.05);}
+    .graph-panel .graph-modes {display:flex;gap:3px;}
+    .graph-panel .graph-modes button[aria-pressed="true"] {background:var(--zia-soft);border-color:var(--zia-accent, #4383a8);font-weight:700;}
+    .graph-panel .graph-canvas3d {width:100%;height:480px;display:block;background:var(--zia-bg);border:1px solid color-mix(in srgb,var(--zia-edge) 70%, transparent);border-radius:12px;touch-action:none;cursor:grab;}
+    .graph-panel .graph-canvas3d:active {cursor:grabbing;}
+    .graph-panel.graph-expanded .graph-canvas3d {height:calc(100vh - 190px);min-height:400px;}
+    .graph-panel svg {width:100%;height:480px;display:block;background:var(--zia-bg);border:1px solid color-mix(in srgb,var(--zia-edge) 70%, transparent);border-radius:12px;}
+    .graph-panel .graph-toolbar {display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;}
+    .graph-panel .graph-controls {display:flex;flex-wrap:wrap;gap:5px;margin-left:auto;}
+    .graph-panel .graph-filters {display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+    .graph-panel .graph-filters button {font-size:12px;padding:6px 10px;cursor:pointer;min-width:88px;}
+    .graph-panel .graph-filters button[aria-pressed="true"] {background:color-mix(in srgb, var(--zia-soft) 65%, #dff0fb 35%);border-color:var(--zia-accent, #4383a8);font-weight:700;box-shadow:inset 0 0 0 1px rgba(67,131,168,.15);}
+    .graph-panel .graph-filters button:focus-visible {outline:2px solid var(--zia-accent, #4383a8);outline-offset:2px;}
+    .graph-panel.graph-expanded .graph-toolbar {position:sticky;top:0;background:var(--zia-bg);z-index:2;padding:5px 0;}
+
+    .graph-panel svg {cursor:grab;touch-action:none;}
+    .graph-panel svg:active {cursor:grabbing;}
+    .graph-panel.graph-expanded {position:fixed;inset:12px;z-index:100000;background:var(--zia-bg);overflow:auto;box-shadow:0 12px 55px rgba(0,0,0,.28);}
+    .graph-panel.graph-expanded svg {height:calc(100vh - 185px);min-height:520px;}
+
+    .graph-panel button {padding:6px 10px;border:1px solid var(--zia-edge);border-radius:8px;color:var(--zia-text);background:var(--zia-bg);}
+    .graph-panel .graph-selection {border-left:3px solid var(--zia-accent);padding:12px!important;}
+    .graph-panel .graph-selection strong {display:block;font-size:13px;margin-bottom:5px;}
+    .graph-panel .graph-info {font-size:11px;color:var(--zia-muted);line-height:1.55;margin-top:8px;padding:6px 8px;border-radius:8px;background:color-mix(in srgb,var(--zia-soft) 72%, transparent);}
+    .note-result {background:var(--zia-soft);border:1px solid var(--zia-edge);border-radius:9px;padding:12px;margin:10px 0;line-height:1.6;} .note-result button {margin-top:5px;}
+    .goals {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-top:17px;}
+    .goal {border:1px solid var(--zia-edge);border-radius:11px;padding:13px;background:var(--zia-bg);min-width:0;}
+    .goal b {display:block;margin-bottom:10px;font-size:12px;font-weight:700;line-height:1.4;}
+    button {font:inherit;cursor:pointer;transition:background-color .12s ease,border-color .12s ease;}
+    .goal button {display:block;width:100%;text-align:left;margin:5px 0;padding:8px 10px;border:1px solid transparent;border-radius:7px;background:var(--zia-soft);color:var(--zia-text);font-size:12px;line-height:1.3;white-space:normal;}
+    .goal button:hover {background:var(--zia-hover);border-color:var(--zia-edge);}
+    button:focus-visible, textarea:focus-visible {outline:2px solid var(--zia-accent);outline-offset:2px;}
+    .hello {font-size:19px;line-height:1.35;font-weight:700;letter-spacing:-.45px;margin:7px 0;} .intro {max-width:580px;line-height:1.55;color:var(--zia-muted);font-size:12px;}
+    .setup {border:1px solid var(--zia-edge);background:var(--zia-soft);border-radius:9px;padding:12px;margin:12px 18px 0;line-height:1.5;}
+    textarea {width:100%;resize:vertical;box-sizing:border-box;font:inherit;line-height:1.5;padding:11px 12px;border:1px solid var(--zia-edge);border-radius:9px;color:var(--zia-text);background:var(--zia-bg);min-height:72px;max-height:220px;}
+    textarea::placeholder {color:var(--zia-muted);}
+    #bar {display:flex;gap:8px;align-items:center;margin-top:9px;flex-wrap:wrap;} #st {color:var(--zia-muted);font-size:11px;flex:1;min-width:90px;}
+    #bar button,.ask button,.note-result button,.setup button {min-height:31px;border:1px solid var(--zia-edge);border-radius:7px;background:var(--zia-bg);color:var(--zia-text);padding:5px 10px;}
+    #bar button:hover,.ask button:hover,.note-result button:hover {background:var(--zia-hover);}
+    #send {background:var(--zia-accent) !important;color:HighlightText !important;border-color:var(--zia-accent) !important;font-weight:650;min-width:73px;}
+    button:disabled {opacity:.45;cursor:default;} #send:disabled {opacity:.5;}
+    @media (max-width:510px) {.goals {grid-template-columns:1fr;} #header {padding:12px;} #log {padding:12px;} #composer {padding:10px 12px;} }
+    @media (prefers-reduced-motion:reduce) {button {transition:none;}}
+  
+    .graph-panel .graph-clear-focus[disabled] {opacity:.5;cursor:default;}
+    .graph-panel .graph-info button {margin-left:8px;}
+
+  </html:style>
+  <html:style>#research-toggle,#research-panel button{padding:6px 10px;min-height:30px;border:1px solid var(--zia-edge);border-radius:8px;background:var(--zia-bg);color:var(--zia-text)}#research-panel input,#research-panel select{box-sizing:border-box;min-height:28px;border:1px solid var(--zia-edge);border-radius:6px;background:var(--zia-bg);color:var(--zia-text)}.research-task strong,.research-task small{display:block;margin-bottom:5px}.research-evidence{overflow-wrap:anywhere}.research-task,.research-evidence{border:1px solid var(--zia-edge);padding:10px;margin:8px 0;border-radius:8px}.research-evidence small{display:block}.research-evidence blockquote{white-space:pre-wrap;margin:8px}.research-task button{margin:4px}#research-panel pre{white-space:pre-wrap;max-height:260px;overflow:auto}#research-panel label{display:block;margin:6px 0}#research-panel details{margin:8px 0}#research-panel [hidden]{display:none!important}</html:style>
+  <html:style>
+        #research-matrix-results { min-width:0; max-width:100%; }
+        .research-matrix-actions { display:flex; gap:8px; flex-wrap:wrap; margin:8px 0; }
+        .research-matrix-hint { font-size:12px; color:var(--zia-muted); line-height:1.5; }
+        .research-matrix-scroll { width:100%; max-width:100%; max-height:min(42vh,440px); overflow:auto; isolation:isolate; border:1px solid var(--zia-edge); border-radius:9px; scrollbar-width:auto; scrollbar-gutter:stable; box-sizing:border-box; }
+        .research-matrix-scroll:focus-visible { outline:2px solid var(--zia-accent); outline-offset:2px; }
+        .research-matrix-table { width:100%; min-width:1500px; table-layout:fixed; border-collapse:separate; border-spacing:0; font-size:12px; line-height:1.5; background:var(--zia-bg); color:var(--zia-text); }
+        .research-matrix-table caption { text-align:left; padding:10px 12px; font-weight:600; background:var(--zia-soft); }
+        .research-matrix-table th,.research-matrix-table td { border-right:1px solid var(--zia-edge); border-bottom:1px solid var(--zia-edge); padding:10px 12px; vertical-align:top; text-align:left; white-space:normal; overflow-wrap:anywhere; }
+        .research-matrix-table thead th { position:sticky; top:0; z-index:2; background:var(--zia-soft); font-weight:700; }
+        .research-matrix-table tr &gt; :first-child { position:sticky; left:0; z-index:1; width:240px; background:var(--zia-bg); }
+        .research-matrix-table thead tr &gt; :first-child { z-index:3; background:var(--zia-soft); }
+        .research-matrix-table tr &gt; :last-child { border-right:0; }
+        .research-matrix-table tbody tr:last-child &gt; * { border-bottom:0; }
+        .research-matrix-table .research-matrix-document { font-weight:400; }
+        .research-matrix-document strong,.research-matrix-document small { display:block; margin-bottom:7px; }
+        .research-matrix-state { display:block; width:fit-content; font-size:11px; font-weight:600; border-radius:6px; background:var(--zia-soft); padding:3px 6px; margin:6px 0 8px; }
+        .research-matrix-field { margin:0 0 8px; white-space:pre-wrap; }
+        .research-matrix-table td small { display:block; color:var(--zia-muted); margin-top:7px; font-size:11px; }
+        .research-matrix-table button { font-size:11px; margin:3px 0; }
+        .research-matrix-issue { color:var(--zia-muted); }
+        .research-reading-card { border:1px solid var(--zia-edge); border-radius:9px; padding:12px; margin-top:14px; }
+        .research-reading-card &gt; p { white-space:pre-wrap; overflow-wrap:anywhere; }
+      </html:style>
+  <html:link rel="stylesheet" href="workspace.css" />
+  <html:div id="wrap">
+    <html:div id="header">
+      <html:div id="brand">IA</html:div>
+      <html:div>
+        <html:div id="headtitle">Zotero IA</html:div>
+        <html:div id="headsub">Espacio de investigación · <html:span id="creator-credit">Hecho por Humanistyc</html:span>
+        </html:div>
+      </html:div>
+      <html:div class="workspace-header-actions">
+        <html:button id="workspace-configure" type="button">Configurar IA</html:button>
+      </html:div>
+    </html:div>
+    <html:div id="setup" class="setup" hidden="hidden">Para usar la IA, configura un proveedor. Puedes organizar proyectos sin conectar una clave. <html:button id="setupBtn">Configurar mi IA</html:button>
+    </html:div>
+    <html:div id="workspace-activity-bar">
+      <html:span id="workspace-activity">Sin tarea en curso</html:span>
+      <html:button id="workspace-stop" type="button" disabled="disabled">Detener tarea</html:button>
+    </html:div>
+    <html:div id="workspace-budget-notice" hidden="hidden" role="status" />
+    <html:div id="workspace">
+      <html:aside id="workspace-sidebar">
+        <html:nav id="workspace-nav" role="tablist" aria-label="Secciones de investigación" aria-orientation="vertical">
+          <html:button id="workspace-nav-projects" type="button" role="tab" aria-controls="workspace-projects" aria-selected="false" data-view="projects" tabindex="-1">▦  Proyectos</html:button>
+          <html:button id="research-toggle" type="button" role="tab" aria-controls="research-panel" aria-selected="false" data-view="analysis" tabindex="-1">⌕  Analizar</html:button>
+          <html:button id="workspace-nav-results" type="button" role="tab" aria-controls="workspace-results" aria-selected="false" data-view="results" tabindex="-1">▤  Resultados</html:button>
+          <html:button id="workspace-nav-chat" type="button" role="tab" aria-controls="workspace-chat" aria-selected="false" data-view="chat" tabindex="-1">✦  Asistente</html:button>
+          <html:button id="workspace-nav-related" type="button" role="tab" aria-controls="workspace-related" aria-selected="false" data-view="related" tabindex="-1">Relacionados</html:button>
+          <html:button id="workspace-nav-settings" type="button" role="tab" aria-controls="workspace-settings" aria-selected="false" data-view="settings" tabindex="-1">⚙  Ajustes</html:button>
+        </html:nav>
+        <html:div id="workspace-project-context">
+          <html:small>Proyecto activo</html:small>
+          <html:strong id="workspace-project-name">Sin proyecto activo</html:strong>
+          <html:p>Tus referencias y colecciones siguen en Zotero.</html:p>
+        </html:div>
+      </html:aside>
+      <html:main id="workspace-main">
+        <html:section id="workspace-projects" role="tabpanel" aria-labelledby="workspace-nav-projects" class="workspace-panel" hidden="hidden">
+          <html:h1>Tus proyectos</html:h1>
+          <html:p class="workspace-lead">Reúne una pregunta, sus colecciones y los análisis que vayas creando.</html:p>
+          <html:div class="workspace-toolbar">
+            <html:button id="workspace-new-project" type="button" class="primary">+ Nuevo proyecto</html:button>
+            <html:button id="workspace-without-project" type="button">Analizar sin proyecto</html:button>
+          </html:div>
+          <html:p id="workspace-project-message" role="status" />
+          <html:form id="workspace-project-form" hidden="hidden" class="workspace-card">
+            <html:h2 id="workspace-project-form-title">Nuevo proyecto</html:h2>
+            <html:label for="workspace-project-title">Nombre del proyecto</html:label>
+            <html:input id="workspace-project-title" type="text" maxlength="120" required="required" />
+            <html:label for="workspace-project-objective">Pregunta u objetivo</html:label>
+            <html:textarea id="workspace-project-objective" rows="2" maxlength="2000" required="required" />
+            <html:label for="workspace-project-columns">Columnas de la matriz</html:label>
+            <html:textarea id="workspace-project-columns" rows="5" maxlength="4000" aria-describedby="workspace-columns-help" />
+            <html:p id="workspace-columns-help" class="workspace-hint">Una columna por línea, entre 1 y 10. Por ejemplo: Periodo histórico, Archivo consultado o Población de estudio, cada uno en su línea. Puedes precisar una columna así: Periodo histórico | Identifica las fechas que estudia el documento.</html:p>
+            <html:button type="button" id="workspace-default-columns">Restablecer columnas habituales</html:button>
+            <html:p class="workspace-hint">Se usarán en los análisis nuevos. Las tareas ya guardadas conservan sus columnas.</html:p>
+            <html:label for="workspace-project-collections">Colecciones del proyecto</html:label>
+            <html:select id="workspace-project-collections" multiple="multiple" size="5" />
+            <html:p class="workspace-hint">Incluye sus subcolecciones. Para seleccionar varias, usa Ctrl en Windows o ⌘ en Mac.</html:p>
+            <html:div class="workspace-toolbar">
+              <html:button type="submit" id="workspace-save-project" class="primary">Guardar proyecto</html:button>
+              <html:button type="button" id="workspace-cancel-project">Cancelar</html:button>
+            </html:div>
+          </html:form>
+          <html:div id="workspace-project-list" />
+        </html:section>
+        <html:section id="research-panel" role="tabpanel" aria-labelledby="research-toggle" class="workspace-panel" hidden="hidden">
+          <html:h1>Analizar documentos</html:h1>
+          <html:p class="workspace-lead">Elige las colecciones, define la lectura y decide qué quieres obtener.</html:p>
+          <html:p id="workspace-analysis-context" class="workspace-context">Puedes trabajar con un proyecto o elegir las colecciones manualmente.</html:p>
+          <html:section class="workspace-card">
+            <html:h2>1. Selecciona los documentos</html:h2>
+            <html:label for="research-collections">Colecciones de Zotero</html:label>
+            <html:select id="research-collections" multiple="multiple" size="5" style="width:100%" />
+            <html:p class="workspace-hint">Incluye subcolecciones. Puedes seleccionar varias con Ctrl o ⌘.</html:p>
+          </html:section>
+          <html:section class="workspace-card">
+            <html:h2>2. Define el análisis</html:h2>
+            <html:label for="research-objective">Pregunta u objetivo de lectura</html:label>
+            <html:textarea id="research-objective" rows="2">Comparar tesis, metodología, fuentes, conceptos y limitaciones.</html:textarea>
+            <html:p id="research-columns-summary" class="workspace-hint" />
+            <html:button id="research-start" class="primary">Analizar y crear matriz</html:button>
+            <html:p class="workspace-hint">Se guarda el avance para continuar más tarde. Encontrarás las fichas y la matriz en Resultados.</html:p>
+          </html:section>
+          <html:section class="workspace-card">
+            <html:h2>Buscar evidencia puntual</html:h2>
+            <html:label for="research-query">¿Qué necesitas localizar en estos documentos?</html:label>
+            <html:input id="research-query" type="text" style="width:100%" />
+            <html:button id="research-search">Buscar pasajes</html:button>
+            <html:p class="workspace-hint">Busca fragmentos del texto disponible. Los resultados se muestran en Pasajes.</html:p>
+          </html:section>
+          <html:p id="research-status" role="status" />
+        </html:section>
+        <html:section id="workspace-results" role="tabpanel" aria-labelledby="workspace-nav-results" class="workspace-panel" hidden="hidden">
+          <html:h1>Resultados y tareas</html:h1>
+          <html:p class="workspace-lead">Continúa un análisis guardado, consulta su matriz o vuelve a los pasajes encontrados.</html:p>
+          <html:div class="workspace-toolbar">
+            <html:label for="workspace-task-filter">Mostrar tareas</html:label>
+            <html:select id="workspace-task-filter">
+              <html:option value="all">Todas las tareas</html:option>
+              <html:option value="project">Solo del proyecto activo</html:option>
+            </html:select>
+          </html:div>
+          <html:h2>Análisis guardados</html:h2>
+          <html:div id="research-runs" />
+          <html:hr />
+          <html:div id="research-result-controls" hidden="hidden" role="group" aria-label="Vistas de resultados" style="position:sticky;top:0;background:var(--zia-bg);padding:6px 0;z-index:1">
+            <html:button id="research-show-passages" type="button" disabled="disabled" aria-pressed="false" aria-controls="research-passage-results">Pasajes</html:button>
+            <html:button id="research-show-matrix" type="button" disabled="disabled" aria-pressed="false" aria-controls="research-matrix-results">Matriz</html:button>
+          </html:div>
+          <html:div id="research-passage-results" hidden="hidden" />
+          <html:div id="research-matrix-results" hidden="hidden" />
+        </html:section>
+        <html:section id="workspace-chat" role="tabpanel" aria-labelledby="workspace-nav-chat" hidden="hidden" class="workspace-panel">
+          <html:div class="workspace-chat-header">
+            <html:h1>Asistente</html:h1>
+            <html:p class="workspace-hint">Usa la selección o la colección abierta en Zotero. Para trabajar con las colecciones del proyecto, entra en Analizar.</html:p>
+          </html:div>
+          <html:details id="workspace-examples">
+            <html:summary>Ejemplos de tareas</html:summary>
+            <html:div class="goals">
+              <html:div class="goal">
+                <html:b>📖 Entender un texto</html:b>
+                <html:button data-t="Resume el documento que tengo seleccionado: tema, argumento central, fuentes y conclusiones.">Resumir lo que tengo seleccionado</html:button>
+                <html:button data-t="Haz una ficha de lectura del documento seleccionado (referencia, tesis, argumentos, conceptos, citas con página) y guárdala como nota.">Hacer una ficha de lectura</html:button>
+                <html:button data-t="Explícame con palabras sencillas los conceptos difíciles del documento seleccionado.">Explicarme conceptos difíciles</html:button>
+              </html:div>
+              <html:div class="goal">
+                <html:b>🔬 Investigación por lotes</html:b>
+                <html:button data-t="Analiza los documentos de la colección abierta por lotes usando analizar_coleccion_lote. Identifica tesis, método, fuentes, conceptos y disponibilidad de texto completo. Continúa los lotes hasta terminar o el límite de pasos. No generes ni guardes notas sin mi autorización; reporta todo resultado incompleto.">Analizar colección por lotes</html:button>
+                <html:button data-t="Consulta ver_avance_coleccion para la colección abierta y retoma el análisis desde proximo_desde. Explica qué información del trabajo anterior no está guardada. No modifiques Zotero sin autorización.">Consultar avance y continuar</html:button>
+              </html:div>
+              <html:div class="goal">
+                <html:b>🕸 Mapa de conocimiento</html:b>
+                <html:button data-map="true">Explorar mapa de mi colección</html:button>
+                <html:button data-t="Identifica y compara los conceptos, metodologías y debates presentes en la colección seleccionada, leyendo fuentes comprobables. Señala explícitamente qué relaciones son inferencias y cuáles están documentadas. Después construye mapa_conocimiento para mostrar las relaciones explícitas de Zotero.">Investigar relaciones documentales</html:button>
+              </html:div>
+              <html:div class="goal">
+                <html:b>✍️ Escribir mi estado del arte</html:b>
+                <html:button data-t="Haz una matriz comparativa (autor, año, tesis, fuentes, método) de la colección que tengo abierta y guárdala como nota.">Tabla comparativa de mi colección</html:button>
+                <html:button data-t="Redacta un borrador de estado del arte con los textos de la colección abierta, agrupado por temas, citando (Autor, año).">Borrador de estado del arte</html:button>
+                <html:button data-t="Según los textos de mi colección abierta, ¿qué temas o preguntas casi nadie ha estudiado?">Encontrar vacíos en lo publicado</html:button>
+              </html:div>
+              <html:div class="goal">
+                <html:b>🗂 Organizar mi biblioteca</html:b>
+                <html:button data-t="Propón etiquetas temáticas para los ítems de la colección abierta y, si las apruebo, aplícalas.">Poner etiquetas por tema</html:button>
+                <html:button data-t="Busca en toda mi biblioteca los textos sobre el tema que te diré y júntalos en una colección nueva. El tema es: ">Juntar textos de un tema</html:button>
+                <html:button data-t="Revisa la colección abierta y dime qué ítems tienen datos incompletos (sin autor, sin fecha, sin PDF).">Revisar datos incompletos</html:button>
+              </html:div>
+              <html:div class="goal">
+                <html:b>🌍 Buscar literatura nueva</html:b>
+                <html:button data-t="Busca en internet literatura académica reciente (últimos 5 años) sobre el tema que te diré, en español e inglés. Muéstrame las 10 más relevantes, dime cuáles ya tengo y cuáles tienen PDF gratis. El tema es: ">Lo más reciente sobre un tema</html:button>
+                <html:button data-t="Lee los textos de mi colección abierta, identifica sus temas principales y busca en internet literatura importante que me falte (que no esté ya en mi biblioteca). Muéstramela antes de guardar nada.">¿Qué me falta en mi colección?</html:button>
+                <html:button data-t="Busca los trabajos más citados sobre el tema que te diré y explícame por qué son importantes. El tema es: ">Los textos clásicos de un tema</html:button>
+              </html:div>
+              <html:div class="goal">
+                <html:b>➕ Agregar referencias</html:b>
+                <html:button id="importPDFDir">📁 Importar carpeta de PDF (incluye subcarpetas)</html:button>
+                <html:button data-t="Agrega a mi biblioteca estas referencias (DOI o ISBN): ">Agregar por DOI o ISBN</html:button>
+                <html:button data-t="Busca en mi biblioteca si ya tengo un texto sobre: ">¿Ya tengo algo sobre…?</html:button>
+              </html:div>
+            </html:div>
+          </html:details>
+          <html:div id="log">
+            <html:div id="welcome">
+              <html:div class="hello">Hola 👋 ¿Qué quieres hacer hoy?</html:div>
+              <html:div class="intro">Elige una tarea o escribe qué necesitas. Puedo analizar documentos, organizar referencias y trabajar con tus colecciones.</html:div>
+            </html:div>
+          </html:div>
+          <html:div id="composer">
+            <html:textarea id="q" rows="2" placeholder="Escribe qué necesitas… Enter para enviar · Shift+Enter para otra línea" aria-label="Instrucción para el asistente" />
+            <html:div id="bar">
+              <html:span id="st" />
+              <html:button id="stop" disabled="true">Detener</html:button>
+              <html:button id="clear">Limpiar chat</html:button>
+              <html:button id="send">Enviar</html:button>
+            </html:div>
+          </html:div>
+        </html:section>
+        <html:section id="workspace-related" role="tabpanel" aria-labelledby="workspace-nav-related" class="workspace-panel" hidden="hidden">
+          <html:h1>Trabajos relacionados</html:h1>
+          <html:p>Encuentra bibliografía relacionada por sus citas. Inciteful recibe únicamente los identificadores que ves abajo. La búsqueda es directa y no usa tokens de IA.</html:p>
+          <html:p id="related-selection-note" />
+          <html:ul id="related-seeds" />
+          <html:div class="workspace-toolbar">
+            <html:button id="related-refresh" type="button">Actualizar selección</html:button>
+            <html:button id="related-search" type="button" class="primary" disabled="disabled">Buscar trabajos relacionados</html:button>
+          </html:div>
+          <html:p id="related-status" role="status" />
+          <html:div id="related-results" hidden="hidden">
+            <html:p id="related-used" />
+            <html:p id="related-source" />
+            <html:p id="related-destination" />
+            <html:button id="related-save" type="button" disabled="disabled">Guardar seleccionados en Zotero</html:button>
+            <html:div id="related-list" />
+          </html:div>
+        </html:section>
+        <html:section id="workspace-settings" role="tabpanel" aria-labelledby="workspace-nav-settings" class="workspace-panel" hidden="hidden">
+          <html:h1>Ajustes y actividad</html:h1>
+          <html:p class="workspace-lead">Configura tu IA, revisa el consumo y consulta los cambios que puedes deshacer.</html:p>
+          <html:section class="workspace-card">
+            <html:h2>Proveedor y conexión</html:h2>
+            <html:p>La clave API y los modelos se configuran en las preferencias de Zotero IA.</html:p>
+            <html:button id="workspace-settings-provider" type="button">Abrir configuración de IA</html:button>
+          </html:section>
+          <html:details open="open">
+            <html:summary>Consumo y límites por tarea</html:summary>
+              <html:p>Estos límites los establece Zotero IA. Son independientes de la cuota y la facturación de tu proveedor; cambiar la clave no los reinicia.</html:p>
+            <html:p id="research-usage" />
+            <html:label>Máximo de solicitudes <html:input id="research-request-limit" type="number" min="1" max="10000" />
+            </html:label>
+            <html:label>Máximo de tokens (estimados antes de enviar) <html:input id="research-token-limit" type="number" min="1000" max="10000000" />
+            </html:label>
+            <html:label>Máximo de tokens por respuesta <html:input id="research-output-limit" type="number" min="100" max="16000" />
+            </html:label>
+            <html:label>
+              <html:input id="research-cache" type="checkbox" />Reutilizar respuestas locales de la misma fuente y pregunta</html:label>
+            <html:button id="research-save-limits">Guardar límites</html:button>
+            <html:p>No se calcula dinero: el precio depende de tu proveedor. Los tokens sin reporte del servicio se marcan como estimados.</html:p>
+          </html:details>
+          <html:details>
+            <html:summary>Propuestas e historial para deshacer</html:summary>
+            <html:div id="research-changes" />
+          </html:details>
+        </html:section>
+      </html:main>
+    </html:div>
+  </html:div>
+  <script src="agent-window.js" />
+  <script src="research-ui.js" />
+  <script src="workspace-ui.js" />
+  <script src="inciteful-ui.js" />
+</window>
