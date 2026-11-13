@@ -1,0 +1,15 @@
+{
+  "manifest_version": 2,
+  "name": "Zotero IA",
+  "version": "1.9.6",
+  "description": "Investigación con evidencias, matrices exportables, tareas reanudables y cambios reversibles",
+  "author": "Humanistyc",
+  "applications": {
+    "zotero": {
+      "id": "zotero-ia@humanistyc.org",
+      "strict_min_version": "6.999",
+      "strict_max_version": "10.*",
+      "update_url": "https://zotero-ia.invalid/updates.json"
+    }
+  }
+}

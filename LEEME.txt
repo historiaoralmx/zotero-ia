@@ -1,0 +1,122 @@
+ZOTERO IA 1.9.6 — HECHO POR HUMANISTYC
+
+INSTALACIÓN Y ACTUALIZACIONES
+En Zotero abre Herramientas → Complementos (o Plugins), usa el engranaje →
+Instalar complemento desde archivo y selecciona zotero-ia-1.9.6.xpi.
+Instálalo sobre la versión anterior y vuelve a abrir Zotero IA. Si Zotero pide
+reiniciar, acepta. Se conservan el identificador del complemento, las preferencias,
+los proyectos y las tareas existentes.
+
+Zotero exige que el manifiesto contenga una dirección de actualización incluso
+si la distribución es manual. Se conserva ese campo con un nombre reservado
+.invalid, que no puede convertirse en un servidor público de terceros. Esa
+dirección no ofrece actualizaciones automáticas.
+Esta versión se actualiza mediante instalación manual de un XPI nuevo. No se ha
+publicado un repositorio ni configurado un servidor de actualizaciones.
+Las instalaciones anteriores también deben actualizarse manualmente.
+No se declara compatibilidad con futuras versiones estables de Zotero sin probarlas.
+
+LECTURA POR PARTES
+Los botones Resumen, Método y fuentes y Ficha de lectura del panel, y las matrices
+nuevas de Analizar, procesan por partes consecutivas el texto que Zotero consigue
+recuperar. Se mantiene una síntesis incremental con evidencia. No se limita el
+análisis a los ocho pasajes iniciales o seleccionados de versiones anteriores.
+Las preguntas puntuales y Buscar pasajes conservan la recuperación de fragmentos.
+
+Se guarda el avance después de cada respuesta completada. Si se alcanza el límite
+interno en una matriz, consulta Resultados: Revisar límite permite ajustar el tope,
+y Continuar en otra etapa abre una etapa explícita con los mismos límites.
+Las partes ya guardadas se reutilizan. El botón de nueva etapa solo aparece si una
+consulta individual cabe en el límite configurado. No se elevan topes por sí solos.
+En el panel lateral, vuelve a pulsar el mismo botón para reanudar una lectura
+interrumpida; cada nueva pulsación inicia otra etapa de consultas con esos límites.
+Un análisis sin respuesta recibida y guardada puede tener que repetirse.
+
+La lectura comprende el texto recuperado, no certifica que el PDF tenga extracción
+perfecta ni que se hayan comprendido todos sus elementos visuales. Se informa si
+hay extracción parcial, texto indexado sin páginas verificadas o solo subrayados.
+Hay una protección de hasta 10000 páginas y 20 millones de caracteres recuperados
+por lectura extensa; si se alcanza, se declara la limitación. Las preguntas por
+pasajes conservan el muestreo de 1000 páginas/1250 fragmentos para archivos grandes.
+Los subrayados y comentarios siguen diferenciados; un comentario personal no
+puede fundamentar por sí solo una afirmación del autor ni un campo de la matriz.
+
+Los análisis largos pueden necesitar varias etapas y solicitudes de IA. Las cuotas
+reales del servicio pueden interrumpirlos. Esta versión no incorpora OCR nuevo.
+El avance no equivale a copiar íntegramente el PDF a una nota: se guardan la síntesis,
+las evidencias utilizadas y el punto de lectura para continuar.
+
+COLUMNAS Y TAREAS ANTERIORES
+En Proyectos → Opciones del proyecto → Editar, escribe entre 1 y 10 columnas,
+una por línea. Puedes añadir una indicación después de |, por ejemplo:
+Periodo histórico | Identifica el periodo estudiado, no la fecha de publicación.
+Archivo consultado
+Población de estudio
+
+Cada tarea conserva sus columnas y las exportaciones las respetan. Editar el
+proyecto no cambia las tareas anteriores. Las fichas antiguas no se rehacen solo
+por actualizar el complemento: crea una tarea nueva para probar la lectura por
+partes. Las tareas pendientes mantienen sus columnas al continuar.
+El ajuste Texto por parte de lectura limita el texto nuevo por petición en este
+modo; 0 usa el ajuste automático y los valores manuales deben ser al menos 256.
+Las instrucciones para la IA se utilizan en las respuestas de lectura.
+
+CONEXIÓN Y CONSUMO
+Configura tu proveedor y comprueba la conexión una vez en esta nueva versión.
+Se conserva la comprobación entre reinicios, vinculada a la configuración y los
+modelos comprobados mediante una huella; ese registro no copia la clave API.
+Si cambias credenciales, dirección, modo o se pierde acceso, hay que comprobar de
+nuevo. Los modelos retirados se excluyen de los respaldos comprobados. Un límite
+de cuota no demuestra que la clave sea inválida ni obliga a gastar otra prueba.
+La comprobación no certifica gratuidad, cuota futura ni ausencia de facturación.
+Esta versión no migra las claves API al gestor de contraseñas de Zotero.
+
+El agente envía una selección de herramientas por tarea y puede habilitar otras
+categorías. El historial antiguo se abrevia para reducir lo reenviado. Los límites
+internos predeterminados siguen siendo 20 solicitudes y 60000 tokens por tarea o
+etapa. Cambiar de clave no reinicia la tarea. La información de consumo sigue
+indicando qué datos fueron reportados y cuáles estimados.
+OpenAI recibe ajustes de parámetros para modelos compatibles con el protocolo
+chat/completions. No se afirma compatibilidad con todo modelo ni con funciones
+exclusivas de otra API. Usa Comprobar conexión y una tarea de prueba con el modelo.
+
+CAMBIOS EN LA BIBLIOTECA Y ESTABILIDAD
+Enviar una colección a la papelera conserva las referencias y permite restaurarla
+mediante Zotero. Si la biblioteca o versión instalada no ofrece una papelera de
+colecciones compatible, el plugin se niega a borrarla definitivamente.
+Las escrituras rutinarias se acumulan por tarea para no eludir su revisión dividiendo
+un lote. Los cambios de metadatos y las operaciones delicadas siguen supervisados.
+Al cambiar de ítem, el panel cancela su lectura pendiente y descarta respuestas
+antiguas para que no se muestren o guarden bajo otra referencia.
+
+Si los archivos locales de consumo, tareas o cambios están dañados, se conservan
+sin sobrescribir. Se muestra un aviso y se bloquean las operaciones que dependen
+de ellos, mientras las demás secciones pueden inicializarse. No se reinician
+silenciosamente el consumo ni el historial. El archivo necesita revisión/recuperación.
+
+TRABAJOS RELACIONADOS
+Selecciona en la ventana principal de Zotero entre una y cinco referencias con DOI
+o identificador OpenAlex. Abre el agente y entra en Relacionados. Si cambias la
+selección, pulsa Actualizar selección. Después, pulsa Buscar trabajos relacionados.
+La búsqueda envía los identificadores mostrados a Inciteful Academic y consulta su
+grafo de citas. Funciona sin clave de IA ni consumo de tokens. La cobertura depende
+del índice, y el servicio externo tiene límites de uso.
+Los resultados muestran título, datos bibliográficos disponibles y enlace. Marca
+las referencias de interés y pulsa Guardar seleccionados en Zotero. El destino es
+la colección personal abierta al preparar la búsqueda, o Mi biblioteca.
+
+VALIDACIÓN
+Pruebas automáticas con datos y respuestas simulados, incluyendo lectura
+consecutiva, citas, avance por partes, presupuestos entre etapas, restauración de
+conexión, respaldo por cuota, papelera, historial abreviado, columnas, exportaciones,
+lecturas canceladas, cambio de ítem y archivos locales dañados.
+Se comprueban sintaxis JavaScript, XHTML, XML de exportación e integridad del XPI.
+No se ha instalado esta versión en Zotero nativo ni usado una API real durante
+esta revisión. Debe hacerse una prueba práctica de los recorridos del taller.
+El historial de versiones está consolidado en CHANGELOG.md.
+
+ASISTENTE POR ESCRITO
+Se ha retirado la función de voz: botones, permisos, grabador y envío de audio.
+Escribe la instrucción y pulsa Enviar o Enter. Ya no hay solicitudes de transcripción
+ni consumo por audio desde el plugin. Las consultas escritas y los análisis siguen
+utilizando la API configurada y consumen los tokens correspondientes.
