@@ -15,16 +15,18 @@ Las versiones anteriores necesitan esa instalación inicial porque su canal esta
 ## Publicar una nueva versión
 
 1. Incorpora los cambios y actualiza `manifest.json`, el manual y el registro de cambios con una versión nueva.
-2. Crea y publica un release estable con el tag correspondiente: por ejemplo, `v1.9.29` para la versión `1.9.29`.
-3. El flujo **Publicar canal estable de Zotero** valida el código, empaqueta el XPI y adjunta `updates.json`, el manual y las sumas de comprobación. Revisa que termine correctamente en **Actions**.
+2. Ejecuta el empaquetador con el tag correspondiente: por ejemplo, `python3 build_release.py --tag v1.9.29 --output dist`.
+3. Crea un release con ese mismo tag y adjunta los cuatro archivos generados en `dist`: el XPI, `updates.json`, el manual y `checksums.txt`. Publica el release como estable después de adjuntarlos.
+
+Los usuarios recibirán la actualización mediante Zotero. El empaquetado se ejecuta localmente; no se ha habilitado ningún proceso de GitHub Actions con permisos para modificar el repositorio.
 
 El actualizador nativo consulta `https://github.com/historiaoralmx/zotero-ia/releases/latest/download/updates.json`. Ese archivo enlaza el XPI de la versión concreta y su hash SHA-256. La versión del manifiesto y del tag deben coincidir; publicar un tag nuevo sin actualizar el código no genera un instalador válido. Evita sustituir un release ya distribuido: publica una versión superior para cualquier corrección.
 
 Comprobación y empaquetado local, sin dependencias externas:
 
 ```sh
-python3 -m unittest discover -s release-tests -v
-python3 scripts/build_release.py --tag v1.9.28 --output dist
+python3 -m unittest test_release -v
+python3 build_release.py --tag v1.9.28 --output dist
 ```
 
 Consulta [LEEME.txt](LEEME.txt) para conocer la configuración y el uso, y [CHANGELOG.md](CHANGELOG.md) para revisar los cambios por versión.
