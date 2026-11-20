@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Zotero IA",
-  "version": "1.9.6",
+  "version": "1.9.28",
   "description": "Investigación con evidencias, matrices exportables, tareas reanudables y cambios reversibles",
   "author": "Humanistyc",
   "applications": {
@@ -9,7 +9,7 @@
       "id": "zotero-ia@humanistyc.org",
       "strict_min_version": "6.999",
       "strict_max_version": "10.*",
-      "update_url": "https://zotero-ia.invalid/updates.json"
+      "update_url": "https://github.com/historiaoralmx/zotero-ia/releases/latest/download/updates.json"
     }
   }
 }

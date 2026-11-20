@@ -70,7 +70,31 @@
       await Z.openResultURL(url);
       return url;
     },
-    async find(ids, {signal} = {}) {
+    async fromOpenAlex(item, id, signal) {
+      const raw = id || String(item.getField("extra") || "").match(/^OpenAlex:\s*(?:https?:\/\/openalex\.org\/)?(W\d+)\s*$/im)?.[1];
+      if (!/^W\d{1,20}$/i.test(raw || "")) return;
+      Z.checkAbort(signal);
+      const key = String(Z.pref("openalexKey") || "").trim();
+      const response = await Zotero.HTTP.request("GET", "https://api.openalex.org/works/" + raw + (key ? "?api_key=" + encodeURIComponent(key) : ""), {responseType: "json", timeout: 20000});
+      Z.checkAbort(signal);
+      const work = typeof response.response === "string" ? JSON.parse(response.response) : response.response;
+      if (String(work?.id || "").replace(/^https?:\/\/openalex\.org\//i, "").toUpperCase() !== raw.toUpperCase()) throw Error("OpenAlex devolvió otro identificador. No se descargó ningún archivo.");
+      const norm = value => String(value || "").trim().replace(/^https?:\/\/(?:dx\.)?doi\.org\//i, "").replace(/^doi:\s*/i, "").toLowerCase();
+      const doi = norm(item.getField("DOI") || item.getExtraField?.("DOI"));
+      if (doi && work.doi && doi !== norm(work.doi)) throw Error("El DOI de OpenAlex no coincide con la referencia guardada.");
+      const locations = [work.best_oa_location, work.primary_location, ...(Array.isArray(work.locations) ? work.locations.slice(0, 20) : [])];
+      const urls = [...new Set(locations.map(location => httpURL(location?.pdf_url)).filter(Boolean))].filter(value => {
+        const host = new URL(value).hostname.toLowerCase();
+        return !/^(?:localhost|\[|0\.|127\.|10\.|169\.254\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.)/.test(host) && !/\.(?:local|internal)$/.test(host);
+      }).slice(0, 3);
+      const add = Zotero.Attachments.addFileFromURLs || Zotero.Attachments.addPDFFromURLs;
+      if (urls.length && typeof add === "function") {
+        Z.checkAbort(signal);
+        // Native download enforces supported file types and rejects HTML pages.
+        await add.call(Zotero.Attachments, item, urls);
+      }
+    },
+    async find(ids, {signal, openPage = true, openAlex = false, openAlexID} = {}) {
       Z.checkAbort(signal);
       if (!Array.isArray(ids) || !ids.length || ids.length > 10) throw new Error("Indica entre 1 y 10 IDs de referencias.");
       const items = [...new Set(ids)].map(itemFor); // Validate the entire batch before writing.
@@ -97,6 +121,14 @@
         }
       }
       Z.checkAbort(signal);
+      if (openAlex) {
+        for (const item of pending) {
+          if ((await localPDFs(item)).length) continue;
+          try {await P.fromOpenAlex(item, items.length === 1 ? openAlexID : undefined, signal);}
+          catch (error) {Z.checkAbort(signal);nativeError = "No se pudo recuperar un PDF de OpenAlex. Puede no estar disponible o requerir acceso adicional.";}
+        }
+      }
+      Z.checkAbort(signal);
       const results = [];
       for (const item of items) {
         Z.checkAbort(signal);
@@ -107,7 +139,7 @@
       }
       // For one requested item, proceed directly to its page. Batches retain one
       // explicit button per item instead of opening up to ten browser tabs.
-      if (results.length === 1 && !results[0].pdf_ids.length && results[0].pagina_url) {
+      if (openPage && results.length === 1 && !results[0].pdf_ids.length && results[0].pagina_url) {
         Z.checkAbort(signal);
         try { await P.openPublication(results[0].item_id); results[0].pagina_abierta = true; }
         catch (e) { results[0].error_apertura = e.message; }

@@ -1,20 +1,319 @@
-ZOTERO IA 1.9.6 — HECHO POR HUMANISTYC
+ZOTERO IA 1.9.28 — HECHO POR HUMANISTYC
 
 INSTALACIÓN Y ACTUALIZACIONES
 En Zotero abre Herramientas → Complementos (o Plugins), usa el engranaje →
-Instalar complemento desde archivo y selecciona zotero-ia-1.9.6.xpi.
+Instalar complemento desde archivo y selecciona zotero-ia-1.9.28.xpi.
 Instálalo sobre la versión anterior y vuelve a abrir Zotero IA. Si Zotero pide
 reiniciar, acepta. Se conservan el identificador del complemento, las preferencias,
 los proyectos y las tareas existentes.
 
-Zotero exige que el manifiesto contenga una dirección de actualización incluso
-si la distribución es manual. Se conserva ese campo con un nombre reservado
-.invalid, que no puede convertirse en un servidor público de terceros. Esa
-dirección no ofrece actualizaciones automáticas.
-Esta versión se actualiza mediante instalación manual de un XPI nuevo. No se ha
-publicado un repositorio ni configurado un servidor de actualizaciones.
-Las instalaciones anteriores también deben actualizarse manualmente.
-No se declara compatibilidad con futuras versiones estables de Zotero sin probarlas.
+ACTUALIZACIONES AUTOMÁTICAS DESDE LA VERSIÓN 1.9.28
+Instala esta versión manualmente una vez. Las versiones anteriores no tienen
+un canal activo y no pueden recibir por sí solas esta actualización.
+Después, Zotero buscará las versiones estables publicadas en Releases del
+repositorio oficial https://github.com/historiaoralmx/zotero-ia.
+En Herramientas → Complementos, comprueba que Actualizaciones automáticas esté
+activado para Zotero IA. El momento de comprobación e instalación depende de
+Zotero y de tus ajustes; no se instala en el instante de publicar el release.
+También puedes usar Buscar actualizaciones en el administrador de complementos.
+El canal comprueba versión, compatibilidad y SHA-256 del instalador. Los borradores
+y las versiones preliminares no se ofrecen por este canal estable. No envía tu
+clave API ni documentos y no consume tokens de IA.
+Las actualizaciones conservan las preferencias, proyectos y biblioteca. Si Zotero
+pide reiniciar para completar una actualización, reinícialo.
+
+NOTA DESDE EL PDF ABIERTO, SIN CONSULTAR A LA IA
+Con el PDF activo en el lector, escribe:
+Genera una nota a partir de las anotaciones de este PDF.
+La orden guarda la nota nativa en la referencia, con sus citas y enlaces,
+sin consultar a la IA. Su creación se puede deshacer desde el historial.
+
+AUTOMATIZAR GENERAR INFORME DE ZOTERO
+Selecciona una colección y escribe en el Asistente:
+Genera un informe de la colección seleccionada.
+Se abre el mismo informe nativo que ofrece el menú contextual Generar informe,
+con los datos bibliográficos, notas y adjuntos disponibles. La orden breve no
+consulta a un modelo ni requiere tener proveedor de IA configurado.
+Para limitar el informe a los registros marcados, escribe:
+Genera un informe de los elementos seleccionados.
+La inclusión de subcolecciones sigue la preferencia nativa de Zotero y se puede
+indicar explícitamente en la herramienta generar_informe_zotero. Las colecciones
+nombradas deben localizarse por sus identificadores reales. No se cambia la
+selección ni se modifican registros. Las bibliotecas diferentes se procesan por
+separado y una selección vacía no se amplía a toda la biblioteca.
+El informe nativo no es una síntesis de IA ni una exportación .docx: son acciones
+diferentes que el agente puede realizar con sus respectivas herramientas.
+
+EXPORTAR INFORMES A WORD DESDE EL ASISTENTE
+Después de recibir un informe puedes escribir: lo quiero en Word.
+El complemento reutiliza esa respuesta y abre Guardar documento Word para elegir
+la carpeta y el nombre, sin pedirle a la IA que vuelva a redactarla. Se mantienen
+los títulos, el énfasis, las listas, las tablas, los caracteres y los enlaces.
+Al finalizar aparece Abrir documento. El selector permite cancelar y exige
+confirmar la sustitución de un archivo existente. Un fallo no se informa como éxito.
+La herramienta exportar_word también acepta un ID de tarea o de lectura guardada.
+Esta exportación no pertenece al menú nativo Exportar colección de Zotero.
+El archivo contiene texto y enlaces; para citas activas utiliza las notas citables
+que se incorporan desde Word con Zotero → Insertar nota.
+Se comprobó en Zotero 10.0.8 Linux el comando desde el Asistente, cero llamadas de
+inferencia, la escritura .docx, el contenido OOXML, tablas y enlaces, la cancelación,
+la protección frente a reemplazos no confirmados y el botón de apertura. No se
+abrió Microsoft Word en esta prueba; la apertura del documento se comprobó hasta
+la llamada al lanzador nativo, con el lanzador simulado para no abrir otra app.
+
+FICHAS Y TABLAS CON CITAS NATIVAS PARA WORD
+Guardar lectura como nota conserva las citas de los apartados estructurados y
+sus evidencias. En Resultados puedes abrir Ver ficha y evidencias → Guardar ficha
+con citas, o usar Guardar tabla como nota con citas en la tabla comparativa.
+Las notas se guardan en Zotero y su creación puede deshacerse desde el historial.
+En Word coloca el cursor y utiliza Zotero → Insertar nota (Insert Note), eligiendo
+la nota guardada. Es necesario tener instalada la integración de Zotero con Word.
+Las referencias son citas nativas y no simples enlaces al PDF. La exportación
+.docx anterior conserva texto y enlaces; no inserta estas citas activas.
+No se vuelven a generar los análisis al guardar la nota. Se conservan las claves
+de las fuentes; las citas literales se comprueban con la evidencia guardada y los
+comentarios personales no se atribuyen al autor. Las páginas físicas del archivo
+se distinguen de las etiquetas de página de las anotaciones de Zotero.
+Se comprobó en Zotero 10.0.8 Linux con el PDF publicado de Gatta en Escripta:
+lectura con respuesta estructurada simulada, nota con metadatos nativos, extracción
+de las citas y localizador por la integración de procesadores de texto, tabla,
+botones de guardado y deshacer. No se ejecutó Microsoft Word ni una API real.
+Referencia del mecanismo nativo: https://www.zotero.org/blog/zotero-6/#adding_notes_to_word_processors
+
+NOTAS DESDE LAS ANOTACIONES DEL PDF ABIERTO
+En el Asistente puedes pedir: Crea una nota a partir de las anotaciones del PDF
+que tengo abierto. El complemento identifica el ID del adjunto activo y su
+referencia padre, lee las anotaciones guardadas y utiliza la exportación nativa
+de Zotero. La nota conserva subrayados, comentarios y enlaces del formato nativo.
+No requiere DOI ni un PDF independiente. Si no tiene referencia padre, crea una
+nota independiente en la misma biblioteca. La creación se puede deshacer.
+La exportación no usa inferencia de IA; la conversación del agente sí usa tu API.
+No se crean notas vacías y los trazos de tinta no se incluyen. Si el PDF o sus
+anotaciones cambian durante la preparación, se interrumpe antes de guardar.
+
+LECTOR PDF SIN TRADUCTOR
+Se retira el panel Zotero IA · Español y su botón Traducir.
+La selección conserva Análisis crítico, Ficha del fragmento y Guardar nota.
+Seleccionar texto no inicia una llamada a la IA.
+
+TABLA COMPARATIVA Y CONTINUIDAD
+Se usa el nombre Tabla comparativa en la interfaz y las exportaciones.
+El tope interno de 60000 tokens y 20 solicitudes queda desactivado por defecto,
+también al actualizar y continuar tareas antiguas. El avance y los contadores
+se conservan. Puede activarse voluntariamente desde las opciones avanzadas.
+Los límites de la API siguen vigentes. El aviso distingue cuota diaria confirmada,
+límite temporal y saturación, y ofrece Cambiar modelo ante un error de cuota.
+El límite de tamaño por respuesta y la revisión de cambios se mantienen.
+
+METADATOS DESDE EL PDF ADJUNTO
+El agente dispone de extraer_metadatos_pdf y completar_metadatos_pdf. Ambas
+aceptan el ID de la referencia o de su PDF adjunto, sin exigir DOI ni un PDF
+independiente. Se lee la cabecera y las primeras y últimas páginas disponibles;
+si falla la extracción estructurada, se intenta el texto indexado.
+Los valores incluyen citas comprobadas en el texto recuperado. Antes de escribir
+se comprueba la identidad del título y se pide aprobar la vista previa. La acción
+de completar conserva campos ya completos y fechas más precisas, no crea otro
+registro ni separa el archivo, y guarda historial para deshacer.
+La verificación y la corrección anteriores también usan primero este camino
+cuando la referencia tiene PDF. Las referencias sin PDF mantienen Crossref.
+La extracción utiliza el proveedor configurado: no constituye una garantía de
+exactitud ni de disponibilidad externa. Los campos sin evidencia se conservan
+pendientes. La extracción no incorpora una búsqueda web nueva automática.
+Se verificó en Zotero 10.0.8 Linux con el PDF publicado del artículo de Massimo
+Gatta en Escripta: lectura del adjunto de una referencia sin DOI, escritura de
+campos y autoría, conservación del padre y deshacer. La respuesta de IA fue
+simulada; no se probó el proveedor real del usuario.
+
+AYUDA Y MANUAL
+En la configuración y en Ajustes se mantiene únicamente Ayuda y manual.
+Se retiraron el acceso a ChatGPT y el campo para configurar su enlace.
+El índice del manual lleva al apartado elegido mediante desplazamiento y foco
+explícitos, también cuando la búsqueda estaba ocultando ese apartado.
+El manual funciona sin conexión y no consume tokens de IA.
+Se verificaron los 18 enlaces del índice en Zotero 10.0.8 Linux, con tres
+tamaños de ventana y búsquedas activas. 338 pruebas automatizadas superadas.
+
+ACTUALIZAR COLECCIONES Y RESPUESTAS INCOMPLETAS
+Analizar tiene un botón Actualizar colecciones y también recarga la lista al
+entrar. Conserva la selección existente, el objetivo editado y la consulta.
+Las carpetas nuevas aparecen sin cerrar el complemento. Una colección de
+proyecto eliminada sigue bloqueando el análisis hasta corregir el proyecto.
+
+Las respuestas vacías, reducidas a cierres como ]} o cortadas por el servicio
+no se dan por terminadas ni se ejecutan sus llamadas incompletas. Se solicita
+una única regeneración más breve, sujeta a los límites existentes de la tarea.
+Si falla otra vez, se muestra un aviso y se conservan las operaciones previas.
+Las pruebas de conexión no añaden ese reintento.
+En los dos modelos Flash gratuitos admitidos de Z.ai se desactiva el modo
+Thinking para reservar la salida a respuestas y herramientas, sin elevar el
+límite configurado. No se modifica ese ajuste para otros proveedores/modelos.
+Documentación del proveedor consultada el 19 de noviembre de 2026:
+https://docs.z.ai/guides/capabilities/thinking-mode
+https://docs.z.ai/guides/llm/glm-4.5
+https://docs.z.ai/api-reference/llm/chat-completion
+La captura no permite determinar la causa exacta de la respuesta original.
+Se comprobaron en Zotero 10.0.8 Linux la recarga manual y automática de
+colecciones con el agente abierto, la selección conservada y el tratamiento
+de respuestas inválidas. Las respuestas del proveedor se simularon.
+334 pruebas automatizadas superadas. No se probó la API real del usuario.
+
+MAPAS CON EXPLICACIÓN
+El gráfico conserva sus controles 2D/3D y añade un recuento de documentos,
+autores y etiquetas, con indicación de vínculos compartidos. El agente recibe
+un resumen en lugar de toda la estructura técnica del gráfico. El acceso
+Investigar relaciones documentales pide lectura y comparación de evidencias
+con enlaces: el gráfico representa únicamente autores y etiquetas de Zotero.
+La respuesta debe explicar los resultados y sus límites, sin volcar JSON.
+Se comprobó en Zotero 10.0.8 Linux el gráfico, el cambio a 3D y la ausencia
+de evidencias en dos registros sin texto. Las respuestas del proveedor fueron
+simuladas; no se certifica el comportamiento de un modelo externo real.
+
+DESPLAZAMIENTO ÚNICO DEL ASISTENTE
+El formulario de documentos, los resultados de importación, los ejemplos y
+la conversación comparten una sola zona de desplazamiento. El cuadro para
+escribir y los botones de envío permanecen visibles en la parte inferior.
+Los resultados de la importación se agrupan en Ver archivos importados y
+pueden desplegarse sin crear otra barra de desplazamiento dentro del panel.
+Se comprobó en Zotero 10.0.8 para Linux con 60 resultados de importación,
+40 mensajes y ventanas de 1080×780, 850×600 y 500×650 píxeles.
+
+LECTURA UNIFICADA EN EL ASISTENTE
+El panel lateral muestra el documento seleccionado y tres accesos: Resumir,
+Método y fuentes y Ficha de lectura. Ya no tiene otro cuadro de conversación.
+Al pulsarlos se abre el asistente principal y se lee ese documento, con avance,
+Detener, evidencias y Guardar lectura como nota. Se conserva tu borrador escrito.
+Cambiar la selección después no cambia el documento ni el destino de su nota.
+Si hay otra tarea activa, la lectura espera su turno; no arranca en paralelo.
+Pulsar otra vez el mismo acceso no duplica una solicitud pendiente o activa.
+
+El análisis incluye ahora un ejemplo de JSON explícito y reconoce formatos
+estructurados equivalentes sin inventar columnas ni evidencias. Cuando el
+formato es incorrecto se hace un solo reintento, sujeto a los límites existentes.
+Si vuelve a fallar, se conserva el avance previo y no se presenta como completado.
+Las citas literales y los IDs de evidencias siguen sujetos a validación.
+También se restauran de forma segura los enlaces de evidencia que Gecko puede
+retirar al insertar Markdown en una ventana privilegiada.
+Se comprobó el recorrido de los tres botones y la creación de notas en Zotero
+10.0.8 para Linux con respuestas de proveedor simuladas. No es una prueba de
+disponibilidad ni calidad de un modelo externo real.
+
+CORRECCIÓN DE MENÚS DESPLEGABLES
+La ventana del agente carga la hoja de estilos base de Gecko usada por Zotero.
+Corrige el fondo transparente y las etiquetas duplicadas de los menús nativos,
+que hacían que las opciones se superpusieran al formulario. Se aplica a todos
+los desplegables de esa ventana, sin reemplazar sus controles ni alterar valores.
+Se comprobó en una instalación aislada de Zotero 10.0.8 para Linux, abriendo
+los menús de colección, tipo de contenedor y filtro de tareas, seleccionando
+una opción y verificando que sigue funcionando la selección múltiple.
+La reproducción directa en Windows queda pendiente.
+
+AGREGAR DOCUMENTOS Y CONTENEDORES
+En Asistente, el panel Agregar documentos queda visible antes de los ejemplos.
+Selecciona una colección de destino, pulsa Agregar documento y elige uno o varios
+archivos. Admite PDF, Word y otros formatos que Zotero pueda almacenar.
+Importar carpeta de PDF incluye sus subcarpetas, con un máximo de 500 archivos.
+Los originales no se mueven ni borran. No se envían al proveedor de IA.
+Para PDF se intenta el reconocimiento nativo de Zotero. Si no obtiene metadatos,
+se crea una referencia provisional con el tipo elegido (Documento, Tesis, Libro
+o Artículo). El título procede del nombre del archivo y queda por completar;
+no se inventan autores, fechas ni instituciones. El archivo queda como adjunto.
+Si Zotero reconoce la referencia, se utiliza ese registro sin crear otro contenedor.
+Estas importaciones nativas no se deshacen desde el historial general del agente.
+Si ocurre un error al vincular un archivo ya importado, se informa y se conserva
+el adjunto en Zotero. Puedes verlo desde el resultado de importación.
+Detener termina el archivo en curso antes de suspender la importación y conserva
+los documentos anteriores. No se omiten archivos distintos solo por compartir nombre.
+
+OBTENER PDF EN RELACIONADOS
+Cada resultado tiene Obtener PDF. Guarda la referencia en el destino de la
+búsqueda o reutiliza una coincidencia exacta de DOI/identificador OpenAlex.
+Busca mediante Zotero y, si falta, consulta las ubicaciones PDF de OpenAlex.
+No toma una página de catálogo ni una URL de resumen como si fuera un PDF.
+Solo informa éxito si el PDF está adjunto al registro y existe localmente.
+Si no se consigue, conserva la referencia y ofrece abrir su página y comprobar
+el PDF posteriormente. No garantiza acceso a publicaciones cerradas.
+La búsqueda y la descarga no consumen tokens de IA. Los servicios externos
+pueden tener límites propios; OpenAlex admite la clave opcional de Ajustes.
+
+GESTIÓN DE REFERENCIAS DESDE EL AGENTE
+Puedes pedir crear una tesis u otro tipo bibliográfico aunque no tengas PDF,
+DOI, ISBN ni los metadatos completos. El tipo, los campos y los roles válidos
+se consultan en la instalación de Zotero, sin una lista fija de disciplinas.
+Ejemplo: Crea un registro de tesis vacío en Subcarpeta uno.
+El agente debe localizar la colección real y crear el registro allí. Si falta
+título, se muestra como pendiente de completar. No inventa autor o universidad.
+
+Se añaden herramientas para consultar un registro completo, editar sus campos
+y creadores, duplicar sus datos, mover o retirar referencias de colecciones,
+quitar etiquetas, relacionar registros, enviarlos a la papelera y restaurarlos.
+Los cambios sobre referencias existentes requieren vista previa y aprobación;
+la creación solicitada de un registro ordinario no añade un diálogo repetitivo.
+Se conserva el límite acumulado de 20 escrituras rutinarias por tarea.
+Las nuevas operaciones entran en el historial de cambios para deshacer.
+Deshacer la creación envía el registro a la papelera; no lo borra definitivamente.
+Si alguien lo editó o agregó adjuntos o notas después, no se elimina al deshacer.
+La duplicación copia campos, creadores y etiquetas, no PDF ni notas.
+El movimiento y la duplicación se limitan a la misma biblioteca.
+La restauración de referencias fusionadas se reserva al flujo nativo de Zotero,
+porque puede modificar relaciones de otros registros fuera de esta operación.
+
+El agente incorpora categorías registros y gestion; debe descubrir herramientas
+antes de afirmar que una función no existe. Esta ampliación no significa que
+estén automatizadas todas las ventanas, ajustes o funciones de otros complementos.
+La validación de esta versión es automatizada con una biblioteca simulada;
+se requiere probar su funcionamiento en la instalación real antes del taller.
+
+ELECCIÓN DE MODELO DE GOOGLE
+En Ajustes → Zotero IA, selecciona Google Gemini y elige un modelo en
+Modelo elegido. Al pulsar Comprobar conexión solo se prueba ese modelo:
+no se pasa automáticamente a otro si falla la comprobación.
+La lista muestra candidatos; sin comprobar no significa disponible o habilitado.
+Marca Comprobar también los modelos de respaldo únicamente si quieres probar
+los demás modelos permitidos. Esta opción tarda más y no se recuerda al cerrar.
+Los respaldos comprobados anteriormente con la misma configuración se conservan.
+Al trabajar, si un modelo falla o agota su cuota, solo se intenta otro que ya
+esté comprobado. Cambiar la clave exige comprobar los modelos de nuevo.
+La comprobación incluye una llamada y respuesta de herramientas sin usar
+la biblioteca. No garantiza que Google esté disponible durante el taller.
+
+COMPROBACIÓN DE Z.AI
+La comprobación utiliza directamente glm-4.7-flash y glm-4.5-flash, que la
+tabla oficial de precios marca como gratuitos. No exige que aparezcan en
+una consulta de catálogo. Ver modelos para comprobar muestra candidatos,
+no modelos habilitados. Pulsa Comprobar conexión para verificar el acceso
+y la llamada y respuesta de herramientas con tu clave Standard. Solo se
+habilitan los modelos que completen esa prueba. No se probarán modelos
+de pago ni se sustituirá uno por FlashX o GLM-5.3.
+También se aceptan los argumentos de herramientas devueltos como objetos
+JSON, además del formato de cadena JSON compatible con OpenAI.
+Referencia: https://docs.z.ai/guides/overview/pricing
+
+MODELOS GRATUITOS DE GEMINI
+La lista revisada el 19 de noviembre de 2026 incluye Gemini 4 Hydrogen,
+Gemini 3.8 Flash, Gemini 3.6 Flash, Gemini 3.5 Flash-Lite y Gemini 3.1 Flash-Lite.
+Después de instalar, abre Ajustes → Zotero IA y pulsa Comprobar conexión.
+Se prueba la conexión y las herramientas de todos los modelos permitidos que
+aparezcan en el catálogo de tu clave. Solo los que superen la prueba se habilitan
+como modelos nuevos y respaldos. La prueba puede hacer hasta diez solicitudes
+para cinco modelos; espera a que termine y evita repetirla innecesariamente.
+Se conserva tu selección actual si sigue permitida y supera la prueba. Si no
+hay selección, se prefiere Hydrogen cuando esté disponible y pase la prueba.
+Si se agota la cuota o falla un modelo, se prueban los demás comprobados.
+Las comprobaciones válidas de versiones anteriores se migran solo para los
+modelos previamente comprobados y que continúan permitidos. Los nuevos requieren
+su propia prueba. No hace falta crear otra clave para añadir estos modelos.
+La disponibilidad y las cuotas dependen de tu proyecto en Google AI Studio.
+Referencia: https://ai.google.dev/gemini-api/docs/pricing
+
+COMPROBACIÓN DE CONEXIÓN
+La prueba espera hasta 45 segundos por solicitud. Si hay saturación o un tiempo
+de espera agotado, conserva la comprobación anterior de los modelos afectados
+solo cuando la clave y la configuración siguen siendo las mismas. No habilita
+modelos nuevos sin comprobarlos ni conserva la autorización ante claves rechazadas
+o fallos de compatibilidad de herramientas. Un modelo que responda correctamente
+en la nueva prueba tiene prioridad sobre los que solo conservan la prueba previa.
+La disponibilidad y la cuota del proveedor pueden variar; una comprobación
+previa no garantiza que el servicio responda ahora.
 
 LECTURA POR PARTES
 Los botones Resumen, Método y fuentes y Ficha de lectura del panel, y las matrices
@@ -23,28 +322,12 @@ recuperar. Se mantiene una síntesis incremental con evidencia. No se limita el
 análisis a los ocho pasajes iniciales o seleccionados de versiones anteriores.
 Las preguntas puntuales y Buscar pasajes conservan la recuperación de fragmentos.
 
-Se guarda el avance después de cada respuesta completada. Si se alcanza el límite
-interno en una matriz, consulta Resultados: Revisar límite permite ajustar el tope,
-y Continuar en otra etapa abre una etapa explícita con los mismos límites.
-Las partes ya guardadas se reutilizan. El botón de nueva etapa solo aparece si una
-consulta individual cabe en el límite configurado. No se elevan topes por sí solos.
-En el panel lateral, vuelve a pulsar el mismo botón para reanudar una lectura
-interrumpida; cada nueva pulsación inicia otra etapa de consultas con esos límites.
-Un análisis sin respuesta recibida y guardada puede tener que repetirse.
-
-La lectura comprende el texto recuperado, no certifica que el PDF tenga extracción
-perfecta ni que se hayan comprendido todos sus elementos visuales. Se informa si
-hay extracción parcial, texto indexado sin páginas verificadas o solo subrayados.
-Hay una protección de hasta 10000 páginas y 20 millones de caracteres recuperados
-por lectura extensa; si se alcanza, se declara la limitación. Las preguntas por
-pasajes conservan el muestreo de 1000 páginas/1250 fragmentos para archivos grandes.
-Los subrayados y comentarios siguen diferenciados; un comentario personal no
-puede fundamentar por sí solo una afirmación del autor ni un campo de la matriz.
-
-Los análisis largos pueden necesitar varias etapas y solicitudes de IA. Las cuotas
-reales del servicio pueden interrumpirlos. Esta versión no incorpora OCR nuevo.
-El avance no equivale a copiar íntegramente el PDF a una nota: se guardan la síntesis,
-las evidencias utilizadas y el punto de lectura para continuar.
+Se guarda el avance después de cada respuesta completada. Por defecto no se pausa
+por consumo acumulado del plugin. Las tareas antiguas pausadas por ese motivo
+se retoman con Continuar. Si se activa voluntariamente el límite opcional, se
+puede desactivar en Ajustes o continuar en otra etapa, conservando lo leído.
+Las cuotas, el acceso y la facturación del proveedor no cambian.
+Se guardan la síntesis, las evidencias y el punto de lectura para continuar.
 
 COLUMNAS Y TAREAS ANTERIORES
 En Proyectos → Opciones del proyecto → Editar, escribe entre 1 y 10 columnas,
@@ -73,8 +356,7 @@ Esta versión no migra las claves API al gestor de contraseñas de Zotero.
 
 El agente envía una selección de herramientas por tarea y puede habilitar otras
 categorías. El historial antiguo se abrevia para reducir lo reenviado. Los límites
-internos predeterminados siguen siendo 20 solicitudes y 60000 tokens por tarea o
-etapa. Cambiar de clave no reinicia la tarea. La información de consumo sigue
+internos acumulados están desactivados por defecto. El registro de consumo sigue
 indicando qué datos fueron reportados y cuáles estimados.
 OpenAI recibe ajustes de parámetros para modelos compatibles con el protocolo
 chat/completions. No se afirma compatibilidad con todo modelo ni con funciones

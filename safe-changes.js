@@ -20,7 +20,20 @@
      if(patch.creators){if(!Array.isArray(patch.creators)||patch.creators.length>200)throw Error("Creadores inválidos");after.creators=copy(patch.creators);}
      if(patch.tags){if(!Array.isArray(patch.tags))throw Error("Etiquetas inválidas");after.tags=patch.tags.map(t=>typeof t==="string"?{tag:t,type:0}:copy(t));if(after.tags.some(t=>!String(t.tag||"").trim()||t.tag.length>200))throw Error("Etiqueta vacía o demasiado larga");}
      if(patch.collections){after.collections=[...new Set(patch.collections.map(Number))].sort((a,b)=>a-b);for(const cid of after.collections){const c=Zotero.Collections.get(cid);if(!c||c.libraryID!==item.libraryID)throw Error("La colección destino no pertenece a la biblioteca del ítem.");}}
+     if(patch.relations){after.relations=copy(patch.relations);}
      if(!same(before,after))operations.push({type:"item",before,after});
+    }else if(patch.type==="createItem"){
+     const record=Z.libraryTools.prepareRecord(patch);
+     this.editable(record.libraryID);
+     operations.push({type:"createItem",before:null,after:record});
+    }else if(patch.type==="setDeleted"){
+     const item=await Zotero.Items.getAsync(Number(patch.id));
+     if(!item||!item.isRegularItem())throw Error("Referencia inexistente o tipo no bibliográfico.");
+     this.editable(item.libraryID);
+     if(typeof patch.deleted!=="boolean")throw Error("Estado de papelera inválido.");
+     await Z.libraryTools.assertTrashChange(item,patch.deleted);
+     if(used.has(item.id))throw Error("Referencia repetida.");used.add(item.id);
+     if(!!item.deleted!==patch.deleted)operations.push({type:"setDeleted",before:this.snapshot(item),after:{libraryID:item.libraryID,deleted:patch.deleted}});
     }else if(patch.type==="renameCollection"){
      const c=Zotero.Collections.get(Number(patch.id));if(!c||c.deleted)throw Error("Colección inexistente");this.editable(c.libraryID);const name=String(patch.name||"").trim();if(!name||name.length>255)throw Error("Nombre inválido");if(used.has("c"+c.id))throw Error("Colección repetida");used.add("c"+c.id);
      operations.push({type:"renameCollection",before:{id:c.id,key:c.key,libraryID:c.libraryID,name:c.name,parentID:c.parentID||null},after:{id:c.id,key:c.key,libraryID:c.libraryID,name,parentID:c.parentID||null}});
@@ -40,25 +53,35 @@
     if(!same(op.before.creators,op.after.creators)){const creators=cs=>cs.map(c=>(c.creatorType||"Creador")+": "+(c.name||[c.firstName,c.lastName].filter(Boolean).join(" "))).join("; ");lines.push("Creadores: "+creators(op.before.creators)+" → "+creators(op.after.creators));}
     if(!same(op.before.tags,op.after.tags))lines.push("Etiquetas: "+op.before.tags.map(t=>t.tag).join(", ")+" → "+op.after.tags.map(t=>t.tag).join(", "));
     if(!same(op.before.collections,op.after.collections)){const names=ids=>ids.map(cid=>Zotero.Collections.get(cid)?.name||cid).join(", ");lines.push("Colecciones: "+names(op.before.collections)+" → "+names(op.after.collections));}
+    if(!same(op.before.relations,op.after.relations))lines.push("Relaciones: "+nice(op.before.relations)+" → "+nice(op.after.relations));
    }else if(op.type==="renameCollection")lines.push("Colección: "+op.before.name+" → "+op.after.name);
+   else if(op.type==="createItem")lines.push("Nueva referencia ("+op.after.itemType+"): "+op.after.fields.title+"\nColección: "+(op.after.collectionID?Zotero.Collections.get(op.after.collectionID)?.name||op.after.collectionID:"raíz de la biblioteca")+"\nCampos: "+nice(op.after.fields)+"\nCreadores: "+nice(op.after.creators));
+   else if(op.type==="setDeleted")lines.push((op.after.deleted?"Enviar a la papelera: ":"Restaurar de la papelera: ")+(op.before.data.title||op.before.key));
    else if(op.type==="createNote")lines.push("Nueva nota para "+(op.after.parentTitle||"la colección")+":\n"+op.after.note.replace(/<[^>]+>/g," "));
    else lines.push("Nueva colección: "+op.after.name);
   }return lines.join("\n");},
   current(planId){const plan=R.changes.find(c=>c.id===planId);if(!plan)throw Error("Propuesta inexistente");return plan;},
   async validate(op,after=false){
    const expected=after?(op.saved||op.after):op.before;
-   if(op.type==="item"||op.type==="createNote"){
+   if(op.type==="createItem"&&!after){
+    this.editable(op.after.libraryID);
+    if(op.after.collectionID){const c=Zotero.Collections.get(op.after.collectionID);if(!c||c.deleted||c.key!==op.after.collectionKey||c.libraryID!==op.after.libraryID)throw Error("La colección destino cambió o ya no existe.");}
+    return;
+   }
+   if(op.type==="item"||op.type==="createNote"||op.type==="createItem"||op.type==="setDeleted"){
     if(!expected)return;
     const item=await Zotero.Items.getAsync(expected.id||Zotero.Items.getByLibraryAndKey(expected.libraryID,expected.key)?.id);if(!item||item.key!==expected.key||item.libraryID!==expected.libraryID||!same(this.snapshot(item),expected))throw Error("El registro cambió desde la vista previa. Se conserva tu edición; prepara una propuesta nueva.");this.editable(item.libraryID);
+    if(!after&&op.type==="item")for(const cid of op.after.collections){const c=Zotero.Collections.get(cid);if(!c||c.deleted||c.libraryID!==item.libraryID)throw Error("La colección destino cambió o ya no existe.");}
+    if(op.type==="setDeleted")await Z.libraryTools.assertTrashChange(item,after?op.before.data.deleted===true:op.after.deleted);
    }else if(op.type==="renameCollection"||op.type==="createCollection"){
     if(!expected)return;const c=Zotero.Collections.get(expected.id);if(!c||c.key!==expected.key||c.name!==expected.name||(c.parentID||null)!==(expected.parentID||null))throw Error("La colección cambió; vuelve a revisar la propuesta.");this.editable(c.libraryID);
     if(after&&op.type==="createCollection"&&(c.getChildItems().length||Zotero.Collections.getByLibrary(c.libraryID,true).some(child=>child.parentID===c.id)))throw Error("La colección contiene datos nuevos. No se elimina al deshacer.");
    }
   },
-  applyState(item,state){const current=item.toJSON();const fields=new Set([...Object.keys(current),...Object.keys(state.data)]);for(const field of fields){if(Zotero.ItemFields.getID(field)&&Zotero.ItemFields.isValidForType(Zotero.ItemFields.getID(field),item.itemTypeID))item.setField(field,state.data[field]||"");}item.setCreators(state.creators);item.setTags(state.tags);item.setCollections(state.collections);},
+  applyState(item,state){const current=item.toJSON();const fields=new Set([...Object.keys(current),...Object.keys(state.data)]);for(const field of fields){if(Zotero.ItemFields.getID(field)&&Zotero.ItemFields.isValidForType(Zotero.ItemFields.getID(field),item.itemTypeID))item.setField(field,state.data[field]||"");}item.setCreators(state.creators);item.setTags(state.tags);item.setCollections(state.collections);if(!same(item.getRelations(),state.relations))item.setRelations(state.relations);},
   routinePlan(plan,routine){
    if(!routine||Z.needsApproval(routine.name,routine.args)||plan.operations.length>20)return false;
-   const types={crear_nota:"createNote",crear_coleccion:"createCollection",renombrar_coleccion:"renameCollection"};
+   const types={crear_nota:"createNote",crear_coleccion:"createCollection",renombrar_coleccion:"renameCollection",crear_referencia:"createItem",duplicar_referencia:"createItem"};
    if(types[routine.name])return plan.operations.length===1&&plan.operations[0].type===types[routine.name];
    if(!["agregar_etiquetas","agregar_a_coleccion","aplicar_organizacion"].includes(routine.name))return false;
    return plan.operations.every(op=>{
@@ -81,14 +104,16 @@
    plan.status="prepared";await R.write("changes",R.changes);
    try{await Zotero.DB.executeTransaction(async()=>{for(const op of plan.operations){Z.checkAbort(signal);await this.validate(op);this.editable(op.after.libraryID);
     if(op.type==="item"){const item=await Zotero.Items.getAsync(op.before.id);this.applyState(item,op.after);await item.save();op.saved=this.snapshot(item);}
+    else if(op.type==="createItem"){const item=new Zotero.Item(op.after.itemType);item.libraryID=op.after.libraryID;for(const [field,value] of Object.entries(op.after.fields))item.setField(field,value);item.setCreators(op.after.creators);item.setTags(op.after.tags);if(op.after.collectionID)item.addToCollection(op.after.collectionID);await item.save();op.after.key=item.key;op.saved=this.snapshot(item);}
+    else if(op.type==="setDeleted"){const item=await Zotero.Items.getAsync(op.before.id);item.deleted=op.after.deleted;await item.save();op.saved=this.snapshot(item);}
     else if(op.type==="renameCollection"){const c=Zotero.Collections.get(op.before.id);c.name=op.after.name;await c.save();op.saved={...op.after};}
     else if(op.type==="createNote"){const item=new Zotero.Item("note");item.libraryID=op.after.libraryID;if(op.after.parentID){const parent=await Zotero.Items.getAsync(op.after.parentID);if(!parent||parent.key!==op.after.parentKey)throw Error("La referencia padre cambió.");item.parentID=op.after.parentID;}else if(op.after.collectionID)item.addToCollection(op.after.collectionID);item.setNote(op.after.note);await item.save();op.after.key=item.key;op.saved=this.snapshot(item);}
     else if(op.type==="createCollection"){const c=new Zotero.Collection();c.libraryID=op.after.libraryID;c.name=op.after.name;if(op.after.parentID)c.parentID=op.after.parentID;await c.save();op.after.key=c.key;op.saved={...op.after,id:c.id};}
-   }});plan.status="applied";plan.appliedAt=new Date().toISOString();await R.write("changes",R.changes);return {status:"applied",planID:plan.id,changes:copy(plan.operations),nota_id:plan.operations.find(o=>o.type==="createNote")?.saved?.id,coleccion_id:plan.operations.find(o=>o.type==="createCollection")?.saved?.id};
-   }catch(e){for(const op of plan.operations){try{if(op.type==="item")await (await Zotero.Items.getAsync(op.before.id)).reload(null,true);else if(op.type==="renameCollection")await Zotero.Collections.get(op.before.id).reload(null,true);}catch(_) {}}plan.status="needs_review";plan.error=String(e.message);await R.write("changes",R.changes);throw e;}
+   }});plan.status="applied";plan.appliedAt=new Date().toISOString();await R.write("changes",R.changes);return {status:"applied",planID:plan.id,changes:copy(plan.operations),item_id:plan.operations.find(o=>o.type==="createItem")?.saved?.id,nota_id:plan.operations.find(o=>o.type==="createNote")?.saved?.id,coleccion_id:plan.operations.find(o=>o.type==="createCollection")?.saved?.id};
+   }catch(e){for(const op of plan.operations){try{if(op.type==="item"||op.type==="setDeleted")await (await Zotero.Items.getAsync(op.before.id)).reload(null,true);else if(op.type==="renameCollection")await Zotero.Collections.get(op.before.id).reload(null,true);}catch(_) {}}plan.status="needs_review";plan.error=String(e.message);await R.write("changes",R.changes);throw e;}
   },
   async undo(planId,{signal,confirm}={}){const plan=this.current(planId);if(plan.status!=="applied")throw Error("Solo se pueden deshacer operaciones aplicadas.");for(const op of plan.operations)await this.validate(op,true);if(typeof confirm!=="function"||await confirm("Deshacer completamente:\n"+this.preview(plan))!==true)return {status:"rejected"};Z.checkAbort(signal);for(const op of plan.operations)await this.validate(op,true);
-   await Zotero.DB.executeTransaction(async()=>{for(const op of [...plan.operations].reverse()){Z.checkAbort(signal);if(op.type==="item"){const item=await Zotero.Items.getAsync(op.before.id);this.applyState(item,op.before);await item.save();}else if(op.type==="renameCollection"){const c=Zotero.Collections.get(op.before.id);c.name=op.before.name;await c.save();}else if(op.type==="createNote"){const item=await Zotero.Items.getAsync(op.saved.id);await item.erase();}else if(op.type==="createCollection"){await Zotero.Collections.get(op.saved.id).erase();}}});
+   await Zotero.DB.executeTransaction(async()=>{for(const op of [...plan.operations].reverse()){Z.checkAbort(signal);if(op.type==="item"){const item=await Zotero.Items.getAsync(op.before.id);this.applyState(item,op.before);await item.save();}else if(op.type==="createItem"){const item=await Zotero.Items.getAsync(op.saved.id);item.deleted=true;await item.save();}else if(op.type==="setDeleted"){const item=await Zotero.Items.getAsync(op.before.id);item.deleted=op.before.data.deleted===true;await item.save();}else if(op.type==="renameCollection"){const c=Zotero.Collections.get(op.before.id);c.name=op.before.name;await c.save();}else if(op.type==="createNote"){const item=await Zotero.Items.getAsync(op.saved.id);await item.erase();}else if(op.type==="createCollection"){await Zotero.Collections.get(op.saved.id).erase();}}});
    plan.status="undone";plan.undoneAt=new Date().toISOString();await R.write("changes",R.changes);return {status:"undone",planID:plan.id};
   },
   confirmNative(text){return Services.prompt.confirm(Zotero.getMainWindow(),"Vista previa de cambios",text);},
@@ -112,8 +137,26 @@
  // Legacy destructive/native operations retain their explicit approval, but are never
  // advertised as atomically reversible: their native UI must manage recognition/downloads.
  const correct=Z.tools.corregir_metadatos.run.bind(Z.tools.corregir_metadatos);
- Z.tools.corregir_metadatos.run=async(args,opts={})=>{
+ Z.tools.corregir_metadatos.run=async function correctWithHistory(args,opts={}){
   R.assertWritable?.("changes");
+  if(!Array.isArray(args.item_ids)||!args.item_ids.length||args.item_ids.length>20)throw Error("Indica entre 1 y 20 IDs de referencias.");
+  if(Z.pdfMetadata){
+   const fromPDF=[],others=[];
+   for(const id of args.item_ids){Z.checkAbort(opts.signal);let context=null;try{context=await Z.pdfMetadata.resolve(id);}catch(e){Z.checkAbort(opts.signal);}
+    (context?.parent&&context.pdf?fromPDF:others).push(id);
+   }
+   if(fromPDF.length){
+    const reports=[];
+    for(const id of fromPDF){Z.checkAbort(opts.signal);try{
+      const result=await Z.pdfMetadata.complete({item_id:Number(id),sobrescribir:true,reemplazar_autores:args.corregir_autores===true},opts);
+      reports.push({...result,estado:result.aplicado?"CORREGIDO":result.estado});
+     }catch(e){Z.checkAbort(opts.signal);if(["BudgetLimitError","ProviderError","ModelPolicyError"].includes(e.name))throw e;reports.push({item_id:Number(id),estado:"ERROR",error:String(e.message||e).slice(0,220)});}
+    }
+    const otherResult=others.length?await correctWithHistory({...args,item_ids:others},opts):{resultados:[]};
+    const resultados=[...reports,...otherResult.resultados];
+    return {resultados,total_corregidos:resultados.filter(r=>r.estado==="CORREGIDO").length,advertencia:"Se leyó primero el PDF adjunto cuando estaba disponible, sin separarlo ni crear otro contenedor. Los cambios PDF se deshacen con deshacer_cambios usando propuesta_id. Las referencias sin PDF conservan la verificación de Crossref por DOI."};
+   }
+  }
   const before=new Map();for(const id of args.item_ids||[]){const item=await Zotero.Items.getAsync(Number(id));if(item?.isRegularItem())before.set(item.id,S.snapshot(item));}
   const result=await correct(args,opts),operations=[];
   for(const [id,previous] of before){const current=S.snapshot(await Zotero.Items.getAsync(id));if(!same(previous,current))operations.push({type:"item",before:previous,after:current,saved:current});}

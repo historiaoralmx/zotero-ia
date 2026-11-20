@@ -1,6 +1,176 @@
+## 1.9.28 — Canal de actualizaciones automáticas
+
+- Activa el canal estable oficial mediante el actualizador nativo de Zotero y los assets de GitHub Releases; no añade procesos ni consultas de IA.
+- Genera updates.json con versión, compatibilidad y hash SHA-256 del XPI. Conserva el identificador y los límites de compatibilidad existentes.
+- El proceso de publicación prepara los archivos del canal para cada release estable; ignora borradores y versiones preliminares.
+- Requiere instalar manualmente esta versión una vez en las copias anteriores. Respeta la preferencia nativa de actualizaciones del usuario.
+
+## 1.9.27 — Nota desde el PDF abierto sin depender del modelo
+
+- Ejecuta directamente órdenes breves para crear una nota desde las anotaciones del PDF activo, incluida la frase de la incidencia. No consulta al modelo ni necesita una API configurada.
+- Identifica el PDF y muestra su título; fija el destino al iniciar la orden y no cambia a otro documento si el lector cambia durante la preparación.
+- Conserva el exportador nativo, comentarios, citas, enlaces, referencia padre y posibilidad de deshacer. No crea notas vacías ni declara éxito si falla el guardado.
+- Mantiene el agente para solicitudes de análisis o síntesis de anotaciones.
+
+## 1.9.26 — Generar informe nativo de Zotero desde el Asistente
+
+- Añade generar_informe_zotero para abrir el informe nativo de colecciones o elementos mediante el mismo protocolo y visor que el menú contextual.
+- Las órdenes breves de informe nativo se ejecutan sin consultar a la IA y sin requerir proveedor configurado; no se confunden con un informe analítico o una exportación Word.
+- Conserva la selección, respeta la preferencia de subcolecciones y permite indicarlas expresamente. No mezcla bibliotecas ni amplía una selección vacía a toda la biblioteca.
+- Usa los metadatos, notas y adjuntos existentes mediante el generador de informes de Zotero, sin crear datos nuevos.
+
+## 1.9.25 — Exportación a Word desde el Asistente
+
+- Añade exportar_word para guardar informes anteriores, tareas y lecturas en .docx, con selector de destino y respuesta verificable de guardado o cancelación.
+- Las órdenes breves como «lo quiero en Word» exportan el informe previo sin otra consulta al modelo.
+- Conserva títulos, énfasis, listas, tablas, Unicode e hipervínculos. Añade Abrir documento tras el guardado.
+- Corrige las instrucciones del agente: no debe negar la capacidad ni inventar un formato Word en Exportar colección de Zotero; distingue archivos .docx de notas con citas activas.
+- Usa escritura exclusiva para archivos nuevos y reemplazo solo tras la selección correspondiente. Comprueba cancelación, fallos y conservación del archivo existente en Zotero 10.0.8 Linux.
+
+## 1.9.24 — Fichas y tablas como notas con citas nativas para Word
+
+- Guarda las lecturas estructuradas con referencias nativas de Zotero por apartado; no convierte enlaces arbitrarios ni Markdown sin evidencia en citas.
+- Añade Guardar ficha con citas y Guardar tabla como nota con citas, con historial reversible y sin repetir inferencia al guardar.
+- Añade al agente guardar_lectura_como_nota, guardar_ficha_como_nota y guardar_tabla_como_nota. Conserva la identidad del documento y las citas de cada fila.
+- Usa etiquetas de página de anotaciones nativas cuando son inequívocas; no convierte automáticamente la numeración física PDF en paginación editorial.
+- Verifica el formato con la preparación nativa de notas de Zotero para procesadores de texto. La inserción se realiza mediante Zotero → Insertar nota dentro de Word; no se ejecutó Microsoft Word en la prueba.
+
+## 1.9.23 — Notas desde las anotaciones del PDF abierto
+
+- Identifica el adjunto abierto en el lector, lo distingue de su referencia padre y conserva su ID durante la tarea del agente.
+- Añade pdf_abierto, leer_anotaciones_pdf y crear_nota_desde_anotaciones; evita ofrecer rutas de reconocimiento de PDF independientes para peticiones de anotaciones.
+- Utiliza el exportador nativo de Zotero y el historial reversible para guardar subrayados, comentarios y enlaces de anotación en una nota de la referencia; sin inferencia adicional al exportar.
+- Admite PDF sin referencia padre en su misma biblioteca, conserva permisos y no crea notas vacías. Detecta anotaciones modificadas durante la preparación.
+
+## 1.9.22 — Lector PDF sin traductor
+
+- Retira el botón Traducir, su panel, caché y registro de eventos del menú de selección del PDF.
+- Conserva Análisis crítico, Ficha del fragmento y Guardar nota, con retirada independiente de su evento al cerrar el complemento.
+- Actualiza el manual; mantiene la continuidad de tareas y la tabla comparativa de 1.9.21.
+
+## 1.9.21 — Tabla comparativa y tareas sin pausa acumulada por defecto
+
+- Desactiva por defecto los topes internos acumulados de tokens y solicitudes, también con preferencias y tareas de versiones anteriores; conserva el registro de consumo y los puntos de lectura.
+- Permite activar voluntariamente un tope propio en opciones avanzadas, sin confundirlo con una cuota diaria del proveedor.
+- Distingue HTTP 429 diario confirmado por la respuesta estructurada de los límites temporales y los errores 503. Ofrece Cambiar modelo en análisis, asistente y lectura.
+- Cambia el nombre visible Matriz por Tabla comparativa en la interfaz, exportaciones y manual; mantiene los identificadores y datos guardados.
+
 # Historial de Zotero IA
 
 Las notas anteriores describen versiones históricas; sus instrucciones y valores predeterminados pueden haber cambiado. Para la versión actual consulta LEEME.txt.
+
+## 1.9.20 — Metadatos del PDF ya adjunto
+
+- Lee datos editoriales del PDF mediante el ID del padre o del adjunto, sin exigir DOI.
+- Verifica citas del texto recuperado y bloquea identidades documentales incompatibles.
+- Completa la referencia existente con vista previa e historial para deshacer.
+- Conserva el PDF adjunto, los campos existentes al completar y las fechas más precisas.
+- Encauza la verificación y la corrección hacia el PDF antes de Crossref.
+- Mantiene herramientas relevantes disponibles en preguntas de seguimiento y aclara los errores de las rutas para PDF independientes.
+
+## 1.9.19 — Índice del manual y ayuda local
+
+- Corrige la navegación del índice en la ventana de Zotero con desplazamiento y foco explícitos.
+- Restablece la búsqueda antes de abrir un apartado oculto por el filtro.
+- Retira de la ayuda los accesos a ChatGPT y el enlace de soporte configurable.
+- Conserva el manual local, su buscador y la impresión.
+
+## 1.9.18 — Ayuda y manual de usuario
+
+- Añade accesos a ayuda en la configuración y en Ajustes.
+- Incluye manual local con 18 apartados, índice, búsqueda e impresión.
+- Permite personalizar el enlace de soporte sin cambiar la configuración de IA.
+- El acceso externo solo abre el navegador y no adjunta claves ni documentos.
+
+## 1.9.17 — Colecciones actualizadas y validación de respuestas
+
+- Añade Actualizar colecciones en Analizar y recarga su lista al entrar sin perder selección, objetivo ni consulta.
+- Conserva el alcance del proyecto y el bloqueo de colecciones ausentes.
+- Detecta respuestas vacías, cierres aislados y respuestas cortadas antes de ejecutar herramientas.
+- Regenera una sola vez dentro de los límites existentes; si falla, informa del problema.
+- Desactiva Thinking en los dos modelos Z.ai Flash admitidos, manteniendo el límite de salida.
+
+## 1.9.16 — Explicación de mapas y relaciones documentales
+
+- Conserva el gráfico completo en la interfaz y envía un resumen de metadatos al agente.
+- Cuenta documentos, autores y etiquetas, e identifica vínculos compartidos sin atribuir relaciones teóricas.
+- Pide evidencias enlazadas para investigar relaciones documentales y una explicación final sin JSON.
+
+## 1.9.15 — Desplazamiento único del asistente
+
+- Una sola zona desplazable para documentos, resultados de importación, ejemplos y conversación.
+- Cuadro de escritura y botones de envío visibles fuera de esa zona.
+- Resultados de importación agrupados en una sección desplegable sin barra propia.
+- Ajusta el desplazamiento de mensajes a la nueva zona compartida.
+- Comprobación en Zotero 10.0.8 Linux con muchos resultados y mensajes, en tres tamaños de ventana.
+
+## 1.9.14 — Lectura lateral integrada con el asistente
+
+- Sustituye el minichat lateral por accesos al documento seleccionado en el asistente principal.
+- Lecturas con avance, detención, cola sin paralelismo, borrador conservado y notas ligadas al documento original.
+- Formato explícito de análisis y compatibilidad con envolturas y nombres de campos equivalentes; un solo reintento ante formato incorrecto.
+- Mantiene la validación de citas y evidencias y conserva el avance al fallar.
+- Restaura enlaces permitidos eliminados por el saneamiento de HTML privilegiado de Gecko.
+- Prueba del flujo en Zotero 10.0.8 Linux con proveedor simulado, además de las pruebas automatizadas.
+
+## 1.9.13 — Menús desplegables nativos
+
+- Carga la hoja base chrome://global/skin/ en la ventana del agente.
+- Corrige la transparencia y la duplicación de etiquetas de los menús nativos.
+- Conserva los valores, eventos y controles de selección múltiple.
+- Verificación directa en Zotero 10.0.8 para Linux, además de las pruebas automatizadas existentes.
+
+## 1.9.12 — Documentos con contenedor y PDF en Relacionados
+
+- Panel visible Agregar documentos en Asistente, con selección de colección y tipo provisional.
+- Selección de archivos individuales y carpetas de PDF; originales conservados.
+- Contenedor provisional cuando el reconocimiento nativo no encuentra metadatos.
+- Botón Obtener PDF en cada trabajo relacionado, con reutilización de referencias por identificador exacto.
+- Búsqueda nativa y descarga desde ubicaciones PDF de OpenAlex, comprobando el adjunto local.
+- Resultados parciales, errores y detención sin borrar archivos ni referencias guardadas.
+
+## 1.9.11 — Gestión directa de registros bibliográficos
+
+- Creación de referencias de los tipos instalados en Zotero, incluidos contenedores de tesis sin PDF ni identificadores.
+- Consulta del esquema local de campos y roles, y de los datos completos de un registro.
+- Edición de campos y creadores, duplicación de datos, retirada de etiquetas, movimiento y retirada de colecciones, relaciones bidireccionales, papelera y restauración.
+- Operaciones integradas con vistas previas, control de concurrencia, límite acumulado de escrituras e historial para deshacer.
+- Protección de las ediciones, notas y adjuntos agregados después de crear un registro.
+- Descubrimiento de herramientas por categorías antes de derivar una tarea a instrucciones manuales.
+- Conserva la selección manual de Google y la comprobación de Z.ai de la versión anterior.
+
+## 1.9.10 — Elección de modelo de Google antes de comprobar
+
+- Selector de modelos de Gemini disponible antes de detectar o comprobar.
+- Por defecto se comprueba únicamente el modelo elegido, sin probar los demás si falla.
+- Casilla voluntaria para comprobar también los respaldos; desactivada al abrir ajustes.
+- Conserva los respaldos comprobados con la misma clave, sin habilitar modelos sin probar.
+- Mantiene la comprobación directa de los dos modelos gratuitos de Z.ai.
+
+## 1.9.9 — Comprobación directa de Z.ai
+
+- Z.ai deja de depender de un catálogo que puede omitir los modelos Flash gratuitos. Se prueban directamente solo glm-4.7-flash y glm-4.5-flash, con la comprobación completa de herramientas antes de habilitarlos.
+- La interfaz distingue los candidatos para comprobar de los modelos realmente comprobados.
+- Se normalizan los argumentos de herramientas devueltos como objetos JSON para que la comprobación y el agente utilicen el mismo formato.
+- La detección de Gemini, su lista gratuita y sus controles de consumo conservan su implementación.
+- Referencias: https://docs.z.ai/guides/overview/pricing y https://docs.z.ai/api-reference/llm/chat-completion
+
+## 1.9.8 — Hydrogen y Flash 3.8
+
+- Se añaden gemini-4-hydrogen y gemini-3.8-flash a los modelos con nivel gratuito. La lista de Gemini queda revisada al 19 de noviembre de 2026.
+- La comprobación recorre los cinco modelos gratuitos disponibles y solo habilita nuevos modelos tras completar su prueba de herramientas.
+- Se conservan las comprobaciones válidas anteriores sin autorizar automáticamente los modelos añadidos; se mantienen los cambios de respaldo por cuota o saturación.
+- Se omite temperature en los nuevos modelos y en Flash 3.6, conforme a las instrucciones actuales de Google.
+- Se elimina gemini-3.5-flash de la lista protegida al no figurar en la tabla actual de precios gratuitos.
+- Referencias oficiales: https://ai.google.dev/gemini-api/docs/pricing y https://ai.google.dev/gemini-api/docs/openai
+
+## 1.9.7 — Comprobación ante fallos temporales
+
+- Se amplía de 20 a 45 segundos el tiempo de espera por solicitud de prueba.
+- Una consulta del catálogo ya no borra la comprobación anterior antes de probar los modelos.
+- Ante saturación, errores temporales o tiempos de espera agotados se conserva una comprobación previa solo para la misma clave y configuración.
+- Los modelos que responden en la nueva prueba tienen prioridad; las claves rechazadas y los fallos de herramientas siguen invalidando el acceso correspondiente.
+- Se aclaran los mensajes sin afirmar que un modelo retenido esté disponible ahora ni que se hayan realizado reintentos que no ocurrieron.
 
 ## 1.9.6 — Trabajos relacionados por citas
 

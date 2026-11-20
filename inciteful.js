@@ -89,7 +89,7 @@
 
     const hello = await post("initialize", {
       protocolVersion: protocol, capabilities: {},
-      clientInfo: { name: "Zotero IA", version: "1.9.6" }
+      clientInfo: { name: "Zotero IA", version: "1.9.12" }
     }, 1);
     const init = readReply(hello, 1);
     if (init.protocolVersion !== protocol || !init.capabilities?.tools) {
@@ -142,25 +142,35 @@
     };
   }
 
+  async function localPaper(paper) {
+    const doi = doiOf(paper.doi), id = openAlexID(paper.id);
+    const searches = [];
+    if (doi) searches.push(["DOI", "is", doi], ["extra", "contains", doi]);
+    if (id) searches.push(["extra", "contains", "openalex.org/" + id]);
+    for (const condition of searches) {
+      const search = new Zotero.Search();search.libraryID = Zotero.Libraries.userLibraryID;search.addCondition(...condition);
+      const matches = await search.search();
+      const items = matches.length ? await Zotero.Items.getAsync(matches) : [];
+      const match = items.find(item => !item.deleted && item.isRegularItem() && ((doi && (doiOf(item.getField("DOI")) === doi || doiOf((item.getField("extra") || "").match(/^DOI:\s*(\S+)\s*$/im)?.[1]) === doi)) || (id && openAlexID((item.getField("extra") || "").match(/^OpenAlex:\s*(\S+)\s*$/im)?.[1]) === id)));
+      if (match) return match;
+    }
+    return null;
+  }
+
   async function savePaper(paper, collectionID, signal) {
     ZoteroIA.checkAbort(signal);
     const doi = doiOf(paper.doi);
     const id = openAlexID(paper.id);
     if (!(doi || id)) throw Error("La publicación no tiene un identificador válido.");
-    if (id) {
-      const search = new Zotero.Search();
-      search.libraryID = Zotero.Libraries.userLibraryID;
-      search.addCondition("extra", "contains", "openalex.org/" + id);
-      const matches = await search.search();
-      const items = matches.length ? await Zotero.Items.getAsync(matches) : [];
-      if (items.some(item => openAlexID((item.getField("extra") || "").match(/^OpenAlex:\s*(\S+)\s*$/im)?.[1]) === id)) {
-        return { estado: "ya estaba en la biblioteca" };
-      }
-    }
     ZoteroIA.checkAbort(signal);
     const collection = collectionID ? Zotero.Collections.get(collectionID) : null;
     if (collectionID && (!collection || collection.deleted || collection.libraryID !== Zotero.Libraries.userLibraryID)) {
       throw Error("La colección de destino ya no está disponible. Actualiza la selección.");
+    }
+    const existing = await localPaper(paper);
+    if (existing) {
+      if (collection && !existing.getCollections().includes(collection.id)) {ZoteroIA.checkAbort(signal);existing.addToCollection(collection.id);await existing.saveTx();}
+      return {estado: "ya estaba en la biblioteca", id: existing.id, titulo: existing.getField("title")};
     }
     const [result] = await ZoteroIA.tools.guardar_publicacion.run({
       publicaciones: [{ doi, openalex_id: id, titulo: paper.title }],
@@ -169,5 +179,14 @@
     return result;
   }
 
-  ZoteroIA.inciteful = { selectedSeeds, search, savePaper };
+  async function obtainPDF(paper, collectionID, signal) {
+    const saved = await savePaper(paper, collectionID, signal);
+    ZoteroIA.checkAbort(signal);
+    const id = saved?.id || (await localPaper(paper))?.id;
+    if (!Number.isSafeInteger(id) || id <= 0) throw Error("No se pudo identificar la referencia guardada para adjuntarle el PDF.");
+    const result = await ZoteroIA.pdfs.find([id], {signal, openPage: false, openAlex: true, openAlexID: openAlexID(paper.id)});
+    return {guardado: saved, item_id: id, busqueda: result};
+  }
+
+  ZoteroIA.inciteful = { selectedSeeds, search, savePaper, obtainPDF };
 })();

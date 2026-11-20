@@ -46,7 +46,15 @@ ZoteroIA.md2html = function (md) {
 
 ZoteroIA.renderMarkdown = function (element, markdown) {
   const text=String(markdown??"");
-  try { element.innerHTML=this.md2html(text); }
+  try {
+    const html=this.md2html(text);
+    element.innerHTML=html;
+    // Gecko sanitizes custom-scheme hrefs in privileged innerHTML sinks.
+    // Restore only URLs produced by the escaped, allowlisted Markdown renderer.
+    const links=element.querySelectorAll?.("a")||[];
+    const urls=[...html.matchAll(/<a href="([^"]*)">/g)].map(match=>match[1].replace(/&(amp|quot|lt|gt);/g,(_m,key)=>({amp:"&",quot:'"',lt:"<",gt:">"}[key])));
+    if(links.length===urls.length)for(let i=0;i<links.length;i++)if(/^(?:https?:\/\/|zotero:\/\/(?:open-pdf|select)\/)/i.test(urls[i]))links[i].setAttribute("href",urls[i]);
+  }
   catch (_) { element.textContent=text; }
 };
 
@@ -299,20 +307,24 @@ ZoteroIA.tools = {
   },
 
   verificar_metadatos: {
-    description:"Contrasta registros de Zotero con los metadatos de Crossref por DOI, SIN modificar nada. Acepta IDs de ítems o la colección seleccionada; hasta 20 por llamada. Informa discrepancias, autores y fuente consultada.",
+    description:"Verifica metadatos SIN modificar la biblioteca. Primero extrae datos del PDF adjunto si existe, aunque no haya DOI; en referencias sin PDF contrasta Crossref por DOI. Acepta IDs o la colección seleccionada; hasta 20 por llamada. Devuelve evidencias y campos encontrados.",
     parameters:{type:"object",properties:{item_ids:{type:"array",items:{type:"integer"}},coleccion_id:{type:"integer"},limite:{type:"integer",description:"Máximo 20 por petición"}}},
-    async run({item_ids,coleccion_id,limite=10}, {signal,confirm}={}) { ZoteroIA.checkAbort(signal);
+    async run({item_ids,coleccion_id,limite=10}, options={}) { const {signal}=options;ZoteroIA.checkAbort(signal);
       let items=[];
       if(Array.isArray(item_ids)&&item_ids.length){items=item_ids.slice(0,20).map(id=>Zotero.Items.get(Number(id))).filter(it=>it&&it.isRegularItem());}
       else {const collection=ZoteroIA.auditCollectionItems(coleccion_id,Math.min(20,Math.max(1,limite)));items=collection.selected;}
       const results=[];
-      for(const it of items){try{results.push(await ZoteroIA.metadataAudit.verify(it));}catch(e){results.push({item_id:it.id,estado:"ERROR_CONSULTA",error:String(e.message||e).slice(0,180)});}}
-      return {revisados:results.length,resultados:results,advertencia:"La verificación no escribe en Zotero. Los datos de Crossref no constituyen garantía absoluta de exactitud."};
+      for(const it of items){try{
+        ZoteroIA.checkAbort(signal);
+        const context=ZoteroIA.pdfMetadata?await ZoteroIA.pdfMetadata.resolve(it.id):null;
+        results.push(context?.pdf?await ZoteroIA.pdfMetadata.extract(it.id,options):await ZoteroIA.metadataAudit.verify(it));
+      }catch(e){ZoteroIA.checkAbort(signal);if(["BudgetLimitError","ProviderError","ModelPolicyError"].includes(e.name))throw e;results.push({item_id:it.id,estado:"ERROR_CONSULTA",error:String(e.message||e).slice(0,180)});}}
+      return {revisados:results.length,resultados:results,advertencia:"La verificación no escribe en Zotero. Consulta la procedencia y las citas de cada resultado: PDF adjunto o Crossref. Revisa los datos antes de aplicarlos."};
     }
   },
   corregir_metadatos: {
     escribe:true,
-    description:"CORRIGE y SOBRESCRIBE metadatos bibliográficos existentes cotejándolos con Crossref por DOI, incluidos títulos, autores, fecha y datos editoriales. En coincidencias de título, reemplaza automáticamente los campos discordantes cuando el usuario lo solicita. Nunca cambia registros cuyo título no concuerda suficientemente con Crossref. Crea historial reversible. Máximo 20 registros.",
+    description:"CORRIGE metadatos existentes leyendo PRIMERO el PDF ADJUNTO, sin exigir DOI ni separar el archivo. En referencias sin PDF consulta Crossref por DOI. Presenta una vista previa y requiere aprobación, conserva fechas más precisas y crea historial reversible. Bloquea títulos incompatibles. Máximo 20 registros.",
     parameters:{type:"object",properties:{item_ids:{type:"array",items:{type:"integer"},description:"Hasta 20 ítems de Zotero"},corregir_autores:{type:"boolean",description:"Reemplazar autores y editores de la fuente cuando sean fiables. Predeterminado false"}},required:["item_ids"]},
     resumen:a=>"Corregir metadatos en "+(a.item_ids||[]).length+" registros usando Crossref; autoría: "+(a.corregir_autores===true?"SÍ, reemplazar autores (requiere aprobación)":"NO modificar autores"),
     async run({item_ids,corregir_autores=false}, {signal,confirm}={}){
@@ -435,9 +447,11 @@ ZoteroIA.tools = {
   examinar_pdf_independiente: {
     description:"Lee texto REAL indexado de un PDF independiente de Zotero para proponer sus metadatos. Devuelve el comienzo del documento; si no hay texto indexado intenta reindexar. La falta de texto recuperado no permite concluir que requiere OCR. Solo lectura. Para procesar lotes identifica primero los IDs mediante auditar_coleccion.",
     parameters:{type:"object",properties:{pdf_id:{type:"integer"}},required:["pdf_id"]},
-    async run({pdf_id}, {signal,confirm}={}) { ZoteroIA.checkAbort(signal);
+    async run({pdf_id}, options={}) { const {signal}=options;ZoteroIA.checkAbort(signal);
       const it=await Zotero.Items.getAsync(Number(pdf_id));
-      if(!it||!it.isAttachment()||it.parentID||it.attachmentContentType!=="application/pdf")throw new Error("El ID indicado no es un PDF independiente.");
+      if(ZoteroIA.pdfMetadata&&it&&!it.deleted&&(it.isRegularItem()||(it.isAttachment()&&it.parentID&&it.attachmentContentType==="application/pdf")))
+        return ZoteroIA.pdfMetadata.extract(it.id,options);
+      if(!it||!it.isAttachment()||it.parentID||it.attachmentContentType!=="application/pdf")throw new Error("Esta herramienta es solo para PDF sin referencia padre. Para leer un PDF ya adjunto usa extraer_metadatos_pdf o completar_metadatos_pdf con el ID de la referencia o del adjunto; no lo separes ni crees otro contenedor.");
       let extracted="", error=null, reindexado=false;
       try{extracted=String(await it.attachmentText||"");}catch(e){error=String(e.message||e);}
       // Una cadena vacía NO demuestra que el PDF sea escaneado. Zotero puede no haberlo indexado.
@@ -510,7 +524,7 @@ ZoteroIA.tools = {
       if(!Array.isArray(pdf_ids)||!pdf_ids.length||pdf_ids.length>10)throw new Error("Indica entre 1 y 10 IDs de PDF independientes.");
       const list=[];
       for(const id of pdf_ids){const item=Zotero.Items.get(Number(id));
-        if(!item||!item.isAttachment()||item.parentID||item.attachmentContentType!=="application/pdf")throw new Error("ID "+id+": no es PDF independiente reconocible.");
+        if(!item||!item.isAttachment()||item.parentID||item.attachmentContentType!=="application/pdf")throw new Error("ID "+id+": esta ruta reconoce solo PDF sin contenedor. Si la referencia ya existe, usa completar_metadatos_pdf con el ID del padre o del adjunto: sí se puede leer y completar sin separar el PDF.");
         list.push(item);
       }
       const engine=Zotero.RecognizeDocument||Zotero.RecognizePDF;
@@ -617,6 +631,7 @@ ZoteroIA.tools = {
     parameters: { type: "object", properties: {} },
     async run(_args={}, {signal,confirm}={}) { ZoteroIA.checkAbort(signal);
       const zp = Zotero.getActiveZoteroPane();
+      if (!zp) return {coleccion:null,items:[]};
       // Zotero 10: los getters singulares lanzan error; se usan los plurales
       let col = null;
       try {
@@ -636,7 +651,7 @@ ZoteroIA.tools = {
         const it = await Zotero.Items.getAsync(item_id);
         if (!it) throw new Error("No existe el ítem " + item_id);
         const r = await ZoteroIA.ask(it, "Extrae del documento, de forma concisa y con páginas cuando sea posible: " + para_que,null,{mode:"full",signal,meterId});
-        return { item: ZoteroIA.summarize(r.ctx.parent), evidencias:r.ctx.evidence||[], cobertura:r.ctx.coverage||null, leido_completo: false, texto_recuperado_completo:!!r.ctx.coverage?.allRecoveredTextProcessed, texto_indexado_procesado: !!r.ctx.text, paginas_verificadas:false, alcance:"Se procesó el texto recuperado; no se verificó la cobertura de todas las páginas", partes: r.ctx.parts || 1, sin_texto_completo: !r.ctx.text, notas: r.answer };
+        return { lectura_id:r.ctx.readingID||null, item: ZoteroIA.summarize(r.ctx.parent), evidencias:r.ctx.evidence||[], cobertura:r.ctx.coverage||null, leido_completo: false, texto_recuperado_completo:!!r.ctx.coverage?.allRecoveredTextProcessed, texto_indexado_procesado: !!r.ctx.text, paginas_verificadas:false, alcance:"Se procesó el texto recuperado; no se verificó la cobertura de todas las páginas", partes: r.ctx.parts || 1, sin_texto_completo: !r.ctx.text, notas: r.answer };
       }
       const item = await Zotero.Items.getAsync(item_id);
       if (!item) throw new Error("No existe el ítem " + item_id);
@@ -1201,6 +1216,37 @@ ZoteroIA.tools.mapa_intelectual_auditado = {
  async run({coleccion_id}, {signal,confirm}={}) { ZoteroIA.checkAbort(signal);return {coleccion_id,estado:"REQUIERE_ANALISIS_DOCUMENTAL",advertencia:"Usa mapa_conocimiento para la red estructural y comparar_documentos para relaciones sustentadas en textos. No se crea automáticamente un grafo de citas que aún no han sido extraídas."};}
 };
 
+// Keep graph geometry in the UI; give the model only an auditable metadata summary.
+ZoteroIA.summarizeKnowledgeMap = function (data) {
+  const nodes = data.nodes || [], edges = data.edges || [];
+  const publications = new Map(nodes.filter(n => n.type === "publication").map(n => [n.id, n]));
+  const associations = new Map();
+  for (const edge of edges) {
+    const publication = publications.get(edge.from) || publications.get(edge.to);
+    const other = publication && (edge.from === publication.id ? edge.to : edge.from);
+    if (!publication || !other) continue;
+    if (!associations.has(other)) associations.set(other, new Set());
+    associations.get(other).add(publication.id);
+  }
+  const label = value => { const text=String(value||"");return text.length>120?text.slice(0,119)+"…":text; };
+  const reference = n => ({item_id:n.item_id, titulo:label(n.label)});
+  const shared = type => nodes.filter(n => n.type === type && associations.get(n.id)?.size > 1)
+    .map(n => ({nombre:label(n.label), total_documentos:associations.get(n.id).size,
+      documentos:[...associations.get(n.id)].slice(0,3).map(id => reference(publications.get(id)))}))
+    .sort((a,b) => b.total_documentos-a.total_documentos);
+  const authors = shared("author"), tags = shared("concept");
+  return {
+    tipo:"resumen_mapa", coleccion:{id:data.coleccion.id,nombre:label(data.coleccion.nombre)},
+    total_documentos:data.total_items, documentos_incluidos:publications.size, truncado:!!data.truncado,
+    autores:nodes.filter(n => n.type === "author").length, etiquetas:nodes.filter(n => n.type === "concept").length,
+    total_autores_compartidos:authors.length, total_etiquetas_compartidas:tags.length,
+    autores_compartidos:authors.slice(0,3), etiquetas_compartidas:tags.slice(0,3),
+    documentos:[...publications.values()].slice(0,12).map(reference),
+    documentos_listados:Math.min(publications.size,12),
+    alcance:"Solo metadatos de Zotero. Esta herramienta no ha leído los textos ni comprobado citas, acuerdos, diferencias o debates. La ausencia de etiquetas compartidas no prueba ausencia de relaciones documentales."
+  };
+};
+
 ZoteroIA.toolSpecs = function () {
   return Object.entries(this.tools)
     .filter(([name]) => name !== "buscar_google" || (this.pref("provider") === "gemini" && !this.modelPolicy?.restricted()))
@@ -1209,7 +1255,7 @@ ZoteroIA.toolSpecs = function () {
 
 ZoteroIA.agentGroups = {
  organizar:{pattern:/colecci|carpeta|organiza|etiquet|renombra|elimina/i,names:["crear_coleccion","renombrar_coleccion","eliminar_coleccion","agregar_etiquetas","agregar_a_coleccion","plan_organizacion","aplicar_organizacion","items_de_coleccion"]},
- lectura:{pattern:/lee|leer|lectur|resum|analiz|compar|tesis|document|matriz|pasaje|evidencia/i,names:["leer_item","leer_con_evidencia","buscar_pasajes","crear_tarea_lectura","continuar_tarea_lectura","ver_tarea_lectura","analizar_coleccion_lote","ver_avance_coleccion","comparar_documentos","traducir_documento","plan_lecturas"]},
+ lectura:{pattern:/lee|leer|lectur|resum|analiz|compar|tesis|document|tabla comparativa|pasaje|evidencia/i,names:["leer_item","leer_con_evidencia","buscar_pasajes","crear_tarea_lectura","continuar_tarea_lectura","ver_tarea_lectura","analizar_coleccion_lote","ver_avance_coleccion","comparar_documentos","traducir_documento","plan_lecturas"]},
  metadatos:{pattern:/metadato|crossref|doi|isbn|autor[ií]a|duplicad|audita/i,names:["verificar_metadatos","corregir_metadatos","revertir_metadatos","auditar_coleccion","auditoria_integral","detectar_duplicados_avanzado","revisar_bibliografia_citada","agregar_por_identificador"]},
  pdf:{pattern:/pdf|adjunt|descarg|reconoc|archivo independiente/i,names:["examinar_pdf_independiente","crear_referencia_desde_pdf","reconocer_pdf_coleccion","recuperar_metadatos_pdf","buscar_pdf_disponible"]},
  buscar:{pattern:/internet|web|google|literatura|art[ií]culos|publicacion|publicaci[oó]n|referencias nuevas|busca.*(?:fuera|extern)/i,names:["buscar_web","buscar_literatura","buscar_google","guardar_publicacion","agregar_por_identificador"]},
@@ -1220,7 +1266,7 @@ ZoteroIA.agentGroups = {
 };
 ZoteroIA.agentToolContext = function(history){
  const enabled=new Set(["descubrir_herramientas","listar_colecciones","buscar_biblioteca","seleccion_actual","crear_nota","ver_consumo_ia"]),known=new Set(enabled);
- const goal=String([...history].reverse().find(m=>m.role==="user")?.content||"");
+ const goal=history.filter(m=>m.role==="user").slice(-3).map(m=>String(m.content||"")).join("\n");
  for(const group of Object.values(this.agentGroups)){for(const name of group.names)known.add(name);if(group.pattern.test(goal))for(const name of group.names)enabled.add(name);}
  // Preserve extensions registered by other modules even before a category exists.
  for(const name of Object.keys(this.tools))if(!known.has(name))enabled.add(name);
@@ -1229,7 +1275,7 @@ ZoteroIA.agentToolContext = function(history){
 };
 ZoteroIA.tools.descubrir_herramientas={
  description:"Habilita las herramientas de una categoría para el siguiente paso. Úsala si falta una acción; no modifica la biblioteca.",
- parameters:{type:"object",properties:{categoria:{type:"string",enum:["organizar","lectura","metadatos","pdf","buscar","mapas","estilos","canales","cambios"]}},required:["categoria"]},
+ parameters:{type:"object",properties:{categoria:{type:"string",enum:["organizar","lectura","metadatos","pdf","buscar","mapas","estilos","canales","cambios","registros","gestion"]}},required:["categoria"]},
  async run({categoria},{toolContext}={}){const group=ZoteroIA.agentGroups[categoria];if(!group)throw Error("Categoría no válida");if(!toolContext)throw Error("Esta acción solo habilita herramientas dentro de una tarea del agente");for(const name of group.names)if(ZoteroIA.tools[name])toolContext.enabled.add(name);return {categoria,herramientas:group.names.filter(name=>ZoteroIA.tools[name]).map(name=>({nombre:name,descripcion:ZoteroIA.tools[name].description}))};}
 };
 ZoteroIA.compactHistory = function(messages){
@@ -1246,11 +1292,12 @@ ZoteroIA.compactHistory = function(messages){
 
 ZoteroIA.agentSystem = function () {
  return "Eres un agente de investigación dentro de Zotero. Responde en el idioma del investigador. Trabaja por defecto con su biblioteca; usa búsquedas externas solo si las pide. Nunca inventes referencias, IDs, citas, páginas, verificaciones, archivos descargados ni acciones realizadas. Una auditoría no equivale a una corrección. Si falla una herramienta, informa del fallo. "
-  +"Usa las herramientas disponibles; si falta una acción, descubre su categoría con descubrir_herramientas. Las categorías son organizar, lectura, metadatos, pdf, buscar, mapas, estilos, canales y cambios. "
+  +"Ejecuta las acciones de Zotero solicitadas mediante herramientas; no las sustituyas por un tutorial manual. Antes de afirmar que una función no está disponible, consulta descubrir_herramientas. Las categorías son organizar, lectura, metadatos, pdf, buscar, mapas, estilos, canales, cambios, registros y gestion. Para crear una tesis, un libro u otro registro vacío usa crear_referencia, sin exigir PDF, DOI ni datos que el usuario no tenga. Consulta ver_esquema_referencia para tipos y campos válidos. Si se pide un contenedor vacío, deja los datos desconocidos pendientes. Distingue siempre referencia bibliográfica de colección y de nota. "
+  +"Para completar o corregir metadatos de una referencia que tiene PDF, usa PRIMERO completar_metadatos_pdf (o extraer_metadatos_pdf si solo se pide consultar), con el ID de la referencia o de su adjunto. No necesita DOI ni que el PDF sea independiente. No uses recuperar_metadatos_pdf, examinar_pdf_independiente o crear_referencia_desde_pdf para leer un adjunto ya vinculado: esas rutas son para PDF sin contenedor. No pidas al investigador que transcriba datos sin intentar extraerlos del PDF. Si falta algo tras leerlo, busca la página editorial o fuentes externas y declara qué se comprobó y qué sigue pendiente; no inventes datos ni afirmes que leíste si la herramienta falló. "
   +"Para contenido documental usa evidencia del texto y distingue resumen, interpretación y cita literal. Informa si solo hay metadatos, resumen bibliográfico, subrayados o una muestra. Si una lectura por partes se pausa, conserva el avance y no afirmes que terminó. Los comentarios personales no son afirmaciones del autor. "
   +"Ejecuta las acciones habituales solicitadas; el ejecutor controla las aprobaciones. No dividas lotes para eludir la revisión. Los cambios de metadatos, propuestas explícitas y acciones destructivas requieren autorización. Nunca sobrescribas una identidad bibliográfica dudosa: hay que revisar DOI y título. Eliminar una colección debe enviarla a la papelera, conservando las referencias. "
   +"Para PDF usa las APIs nativas; afirma que existe un archivo local solo cuando la herramienta lo verifique. Si se abre una página, falta pulsar Zotero Connector y comprobar el adjunto. No concluyas que necesita OCR solo porque no se extrajo texto. "
-  +"Los mapas de etiquetas no prueban relaciones teóricas, citas o contradicciones. Los cambios CSL son limitados: no prometas conversiones completas de estilo. En RSS distingue URL encontrada, XML válido y suscripción realmente guardada. "
+  +"Los mapas de etiquetas no prueban relaciones teóricas, citas o contradicciones. Después de mapa_conocimiento explica brevemente los vínculos de autoría y etiquetas compartidas; no vuelques JSON, nodos ni aristas en la respuesta salvo petición explícita de datos técnicos. Si se piden relaciones documentales, el mapa de metadatos por sí solo no completa la tarea: recupera evidencia con leer_con_evidencia o buscar_pasajes, compara al menos dos textos accesibles, cita sus enlaces y distingue evidencia de interpretación. Indica los documentos examinados, los no accesibles y los límites de la muestra; si faltan textos, dilo sin inventar relaciones. Los cambios CSL son limitados: no prometas conversiones completas de estilo. En RSS distingue URL encontrada, XML válido y suscripción realmente guardada. "
   +"La memoria abreviada no autoriza nuevas acciones. Verifica los registros antes de repetir una modificación interrumpida. Fecha: "+new Date().toISOString().slice(0,10)+".";
 };
 
@@ -1322,7 +1369,7 @@ ZoteroIA.makeTaskPlan = function (objective) {
 // 0.7.1: acciones ordinarias sin diálogos repetitivos. Política de seguridad
 // centralizada en el ejecutor: las instrucciones del modelo NO la pueden omitir.
 ZoteroIA.needsApproval = function (name, args) {
-  const routine = new Set(["crear_nota", "crear_coleccion", "renombrar_coleccion", "agregar_por_identificador"]);
+  const routine = new Set(["crear_nota", "crear_coleccion", "renombrar_coleccion", "agregar_por_identificador", "crear_referencia", "duplicar_referencia"]);
   if (routine.has(name)) return false;
   const batch=name==="guardar_publicacion"?args?.publicaciones:
     name==="aplicar_organizacion"?args?.asignaciones:
@@ -1342,6 +1389,10 @@ ZoteroIA.runAgent = async function (history, { onEvent = () => {}, confirm, maxS
   const toolContext=this.agentToolContext(history),writeBudget={used:0};
   let pendingBatch=null;
   try {
+  if(this.readerContext?.isReaderRequest(objective?.content)){
+    toolContext.readerPDFID=this.readerContext.activePDFID();
+    if(toolContext.readerPDFID)messages[0].content+=" PDF abierto al iniciar esta petición: ID del adjunto "+toolContext.readerPDFID+". Para sus anotaciones usa las herramientas de anotaciones; conserva este destino aunque el usuario cambie de pestaña durante la tarea.";
+  }
   const fresh = new Set(); // resultados que el modelo todavía no ha visto
   for (let step = 0; step < maxSteps; step++) {
     ZoteroIA.checkAbort(signal);
@@ -1387,7 +1438,7 @@ ZoteroIA.runAgent = async function (history, { onEvent = () => {}, confirm, maxS
             result = await this.withAbort(tool.run(args, {signal,confirm:typeof confirm==="function"?text=>confirm(text,signal):undefined,meterId:taskId,toolContext,writeBudget}),signal);
             ZoteroIA.checkAbort(signal);
             if (tool.escribe) counters.writes++; else counters.reads++;
-            onEvent("ejecutada", { name, write: !!tool.escribe, result: name === "crear_nota" ? { nota_id: result && result.nota_id } : (["mapa_conocimiento", "buscar_pdf_disponible"].includes(name) ? result : null) });
+            onEvent("ejecutada", { name, write: !!tool.escribe, result: ["crear_nota","crear_nota_desde_anotaciones","guardar_lectura_como_nota","guardar_ficha_como_nota","guardar_tabla_como_nota"].includes(name) ? { nota_id: result && result.nota_id } : (["mapa_conocimiento", "buscar_pdf_disponible", "exportar_word"].includes(name) ? result : null) });
           }
         } catch (e) {
           ZoteroIA.checkAbort(signal);
@@ -1402,7 +1453,9 @@ ZoteroIA.runAgent = async function (history, { onEvent = () => {}, confirm, maxS
           result={error:safe};onEvent("error",{name,message:safe});
         }
       }
-      let content = JSON.stringify(result);
+      const modelResult = name === "mapa_conocimiento" && result?.tipo === "mapa_conocimiento"
+        ? this.summarizeKnowledgeMap(result) : result;
+      let content = JSON.stringify(modelResult);
       if (content.length > 40000) content = content.slice(0, 40000) + "…(recortado)";
       return { role: "tool", tool_call_id: call.id, content };
     };

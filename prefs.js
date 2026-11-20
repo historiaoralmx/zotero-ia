@@ -10,6 +10,7 @@ pref("extensions.zotero-ia.fallbackModels", "");
 pref("extensions.zotero-ia.freeModelsOnly", true);
 pref("extensions.zotero-ia.freeTierConfirmed", false);
 
+pref("extensions.zotero-ia.taskBudgetEnabled",false);
 pref("extensions.zotero-ia.taskRequestLimit",20);
 pref("extensions.zotero-ia.taskTokenLimit",60000);
 pref("extensions.zotero-ia.responseTokenLimit",1800);
