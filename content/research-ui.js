@@ -6,11 +6,11 @@
  const message=text=>{$("research-status").textContent=text;ZIA.workspace?.note(text);};
  function refreshUsage(){const u=R.usage;const tokens=Object.values(u.tasks).reduce((n,t)=>n+t.tokens,0),estimated=Object.values(u.tasks).some(t=>t.estimatedRequests>0);$("research-usage").textContent=u.totalRequests+" solicitudes · "+tokens+" tokens "+(estimated?"(incluye estimaciones)":"reportados")+" · "+u.cacheHits+" respuestas reutilizadas"+(Object.values(u.tasks).some(t=>t.unmeteredRejections)?" · Hay intentos rechazados sin consumo confirmado":"")+(u.last?" · Último modelo: "+u.last.model+(u.last.fallback?" (respaldo)":""):"");}
  async function work(action){if(busy){message("Termina o detén la tarea actual antes de iniciar otra.");return;}busy=true;ZIA.workspace?.setActivity("analysis");ctrl=new AbortController();$("stop").disabled=false;$("send").disabled=true;
-  try{await action(ctrl.signal);}catch(e){message(ctrl.signal.aborted?"Tarea detenida. El avance guardado permanece disponible.":e.message);}finally{busy=false;$("stop").disabled=true;$("send").disabled=false;refresh();}
+  try{await action(ctrl.signal);}catch(e){if(!ctrl.signal.aborted)ZIA.workspace?.providerNotice(e);message(ctrl.signal.aborted?"Tarea detenida. El avance guardado permanece disponible.":e.message);}finally{busy=false;$("stop").disabled=true;$("send").disabled=false;refresh();}
  }
  function button(parent,label,handler){const b=el("button",label);b.type="button";b.addEventListener("click",()=>handler().catch(e=>message(e.message)));parent.appendChild(b);return b;}
  function selected(){const ids=[...$("research-collections").selectedOptions].map(o=>Number(o.value));if(!ids.length)throw Error("Selecciona una colección para definir el alcance.");return ids;}
- async function exportRun(run,format){const fp=Components.classes["@mozilla.org/filepicker;1"].createInstance(Components.interfaces.nsIFilePicker);fp.init(window.browsingContext,"Exportar matriz",fp.modeSave);fp.defaultString="Matriz-"+run.id+"."+format;fp.defaultExtension=format;fp.appendFilter(format.toUpperCase(),"*."+format);const result=await new Promise(resolve=>fp.open(resolve));if(result!==fp.returnOK&&result!==fp.returnReplace)return;await R.exportMatrix(run.id,format,fp.file.path);message("Matriz exportada con sus evidencias.");}
+ async function exportRun(run,format){const fp=Components.classes["@mozilla.org/filepicker;1"].createInstance(Components.interfaces.nsIFilePicker);fp.init(window.browsingContext,"Exportar tabla comparativa",fp.modeSave);fp.defaultString="Tabla comparativa-"+run.id+"."+format;fp.defaultExtension=format;fp.appendFilter(format.toUpperCase(),"*."+format);const result=await new Promise(resolve=>fp.open(resolve));if(result!==fp.returnOK&&result!==fp.returnReplace)return;await R.exportMatrix(run.id,format,fp.file.path);message("Tabla comparativa exportada con sus evidencias.");}
  function evidenceCard(parent,e){const article=el("article");article.className="research-evidence";const link=el("a",e.title||"Abrir fuente");if(e.url)link.href=e.url;article.appendChild(link);article.appendChild(el("small",(e.pageVerified?"Página PDF "+e.page:"Página no verificada")+" · "+e.kind+" · "+e.id));if(e.origin==="comment")article.appendChild(el("strong","Comentario personal: no es una afirmación del documento."));article.appendChild(el("blockquote",e.text));if(e.matched?.length)article.appendChild(el("small","Coincidencias: "+e.matched.join(", ")));parent.appendChild(article);}
  const resultViews = [
   { button: $("research-show-passages"), content: $("research-passage-results") },
@@ -32,10 +32,11 @@
  const fieldKind={resumen:"Resumen",interpretacion:"Interpretación de la IA",cita:"Cita literal","sin evidencia":"Sin evidencia suficiente","cita no verificada":"Cita no verificada"};
  function documentTitle(ref,row){if(row?.title)return row.title;if(ref.title)return ref.title;try{const title=Zotero.Items.get(ref.id)?.getField("title");if(title)return title;}catch(_){}return ref.key||"Documento "+ref.id;}
  function rowState(row){if(!row)return {label:"Pendiente",message:"Este documento todavía no se ha analizado."};if(row.status==="done")return {label:"Analizado"};if(row.status==="no_text")return {label:"Sin texto disponible",message:row.error||"No se recuperó texto para analizar este documento."};if(row.status==="missing")return {label:"Documento no disponible",message:row.error||"El documento ya no está disponible en la biblioteca."};return {label:"Requiere revisión",message:row.error||"El análisis no se completó. Puedes reintentarlo desde Tareas guardadas."};}
- function readingCard(parent,row,title,onBack,columns){
+ function readingCard(parent,row,title,onBack,columns,run){
   parent.replaceChildren();parent.hidden=false;
   const actions=el("div");actions.className="research-matrix-actions";button(actions,"Volver a la tabla",async()=>onBack());parent.appendChild(actions);
   parent.appendChild(el("h3","Ficha de lectura · "+title));
+  if(ZIA.citationNotes&&row.status==="done")button(actions,"Guardar ficha con citas",()=>work(async signal=>{const result=await ZIA.citationNotes.saveRow(run.id,row.itemID,{signal,confirm:confirmUI});message(result.mensaje);}));
   const metadata=[row.authors,row.year].filter(Boolean).join(" · ");if(metadata)parent.appendChild(el("p",metadata));
   const cited=new Set();
   for(const [name,label] of columns){const field=row.fields?.[name]||{};
@@ -56,13 +57,15 @@
  }
  function matrix(run){
   const columns=matrixFields(run);
-  if(run.budget)ZIA.workspace?.budgetNotice(run.budget);
+  if(run.budget&&R.settings().enabled)ZIA.workspace?.budgetNotice(run.budget);
   const box=$("research-matrix-results");box.dataset.runId=run.id;box.replaceChildren();
-  box.appendChild(el("h3","Matriz comparativa de lectura"));box.appendChild(el("p","Objetivo: "+run.objective));
+  box.appendChild(el("h3","Tabla comparativa de lectura"));box.appendChild(el("p","Objetivo: "+run.objective));
   const done=run.rows.filter(r=>r.status==="done").length;
   box.appendChild(el("p",(status[run.status]||run.status)+" · "+done+" de "+run.items.length+" documentos analizados · "+run.rows.length+" procesados."));
   box.appendChild(el("p","Cada fila corresponde a un documento. Compara las columnas para identificar coincidencias y diferencias. Los análisis son generados por IA: comprueba las fuentes desde la ficha de lectura."));
   const actions=el("div");actions.className="research-matrix-actions";button(actions,"Exportar a Excel",()=>exportRun(run,"xlsx"));button(actions,"Exportar a Word",()=>exportRun(run,"docx"));box.appendChild(actions);
+  if(ZIA.citationNotes&&run.rows.some(row=>row.status==="done"))button(actions,"Guardar tabla como nota con citas",()=>work(async signal=>{const result=await ZIA.citationNotes.saveRun(run.id,null,{signal,confirm:confirmUI});message(result.mensaje);}));
+  if(ZIA.citationNotes)box.appendChild(el("p","Para llevar las citas activas a Word, guarda la tabla como nota y usa Zotero → Insertar nota en Word. La exportación a .docx conserva el texto y los enlaces."));
   if(!run.items.length){box.appendChild(el("p","Esta tarea no contiene documentos."));showResults(resultViews[1]);return;}
   const hint=el("p","Desplázate hacia la derecha para ver todas las columnas. Usa «Ver ficha y evidencias» para revisar el análisis completo y sus fuentes.");hint.className="research-matrix-hint";box.appendChild(hint);
   const scroll=el("div");scroll.className="research-matrix-scroll";scroll.tabIndex=0;scroll.setAttribute("role","region");scroll.setAttribute("aria-label","Tabla comparativa de documentos. Desplazamiento horizontal y vertical.");
@@ -76,7 +79,7 @@
    const metadata=[row?.authors,row?.year].filter(Boolean).join(" · ");if(metadata)doc.appendChild(el("small",metadata));
    const badge=el("span",state.label);badge.className="research-matrix-state";doc.appendChild(badge);
    if(row?.status==="done"||row?.evidence?.length){
-    const view=button(doc,"Ver ficha y evidencias",async()=>readingCard(card,row,title,()=>{card.hidden=true;scroll.scrollIntoView({block:"nearest"});view.focus();},columns));
+    const view=button(doc,"Ver ficha y evidencias",async()=>readingCard(card,row,title,()=>{card.hidden=true;scroll.scrollIntoView({block:"nearest"});view.focus();},columns,run));
    }
    tr.appendChild(doc);
    if(row?.status!=="done"){const cell=el("td",state.message);cell.setAttribute("colspan",String(columns.length));cell.className="research-matrix-issue";tr.appendChild(cell);}
@@ -90,11 +93,11 @@
   table.appendChild(body);scroll.appendChild(table);box.appendChild(scroll);box.appendChild(card);showResults(resultViews[1]);
  }
  function refresh(){const tasks=$("research-runs");tasks.replaceChildren();for(const run of [...R.runs].reverse().filter(run=>$("workspace-task-filter")?.value!=="project" || (ZIA.projects?.current()?.id && run.projectId===ZIA.projects.current().id))){
-  const box=el("div");box.className="research-task";box.appendChild(el("strong",run.objective));box.appendChild(el("small",run.collections.map(c=>c.name).join("; ")));box.appendChild(el("p",(status[run.status]||run.status)+" · "+run.rows.length+" / "+run.items.length+(run.reason?" · "+run.reason:"")));
+  const box=el("div");box.className="research-task";box.appendChild(el("strong",run.objective));box.appendChild(el("small",run.collections.map(c=>c.name).join("; ")));box.appendChild(el("p",(status[run.status]||run.status)+" · "+run.rows.length+" / "+run.items.length+(run.reason&&(!run.budget||R.settings().enabled)?" · "+run.reason:"")));
   if(run.readingProgress)box.appendChild(el("small","Avance dentro del documento: "+run.readingProgress.done+" / "+run.readingProgress.total+" fragmentos. Se conserva la última parte guardada."));
-  if(run.budget)button(box,"Revisar límite del plugin",async()=>{ZIA.workspace?.budgetNotice(run.budget);ZIA.workspace?.reviewBudget(run.budget);});
-  if(run.budget&&run.budget.nextEstimate<=run.budget.maxTokens)button(box,"Continuar en otra etapa",()=>work(async signal=>{const result=await R.process(run.id,{signal,newStage:true,onProgress:p=>message("Analizados "+p.done+" de "+p.total+": "+p.title)});matrix(result);message("Etapa finalizada. Se conservaron las partes ya leídas y se aplicaron los mismos límites configurados.");}));
-  button(box,"Ver matriz",async()=>matrix(run));
+  if(run.budget&&R.settings().enabled)button(box,"Revisar límite opcional",async()=>{ZIA.workspace?.budgetNotice(run.budget);ZIA.workspace?.reviewBudget(run.budget);});
+  if(run.budget&&R.settings().enabled&&run.budget.nextEstimate<=run.budget.maxTokens)button(box,"Continuar en otra etapa",()=>work(async signal=>{const result=await R.process(run.id,{signal,newStage:true,onProgress:p=>message("Analizados "+p.done+" de "+p.total+": "+p.title)});matrix(result);message("Etapa finalizada. Se conservaron las partes ya leídas y se aplicaron los mismos límites configurados.");}));
+  button(box,"Ver tabla comparativa",async()=>matrix(run));
   button(box,"Continuar",()=>work(async signal=>{if(!ZIA.isConfigured())throw Error("Configura tu IA para analizar los textos.");const result=await R.process(run.id,{signal,onProgress:p=>message("Analizados "+p.done+" de "+p.total+": "+p.title)});matrix(result);message(status[result.status]||result.status);}));
   const extra=el("details");extra.className="workspace-secondary-actions";extra.appendChild(el("summary","Más opciones"));box.appendChild(extra);
   button(extra,"Reintentar incidencias",()=>work(async signal=>{const result=await R.process(run.id,{signal,retryErrors:true,onProgress:p=>message(p.done+" / "+p.total)});matrix(result);}));
@@ -102,7 +105,7 @@
   button(extra,"Word",()=>exportRun(run,"docx"));button(extra,"Excel",()=>exportRun(run,"xlsx"));button(extra,"JSON",()=>exportRun(run,"json"));
   button(extra,"Eliminar tarea",async()=>{
    if(busy){message("Termina o detén la tarea actual antes de eliminar otra.");return;}
-   if(!window.confirm("¿Eliminar la tarea «"+run.objective+"» y su matriz guardada? Esta acción no se puede deshacer."))return;
+   if(!window.confirm("¿Eliminar la tarea «"+run.objective+"» y su tabla comparativa guardada? Esta acción no se puede deshacer."))return;
    await work(async()=>{
     await R.deleteRun(run.id);
     const view=resultViews[1];
@@ -125,8 +128,8 @@
   if(plan.status==="draft")button(details,"Revisar y aplicar",()=>work(async signal=>{const result=await S.apply(plan.id,{signal,confirm:confirmUI});message(result.status==="applied"?"Cambios aplicados. Puedes deshacerlos desde este historial.":"No se aplicaron cambios.");}));
   if(plan.status==="applied")button(details,"Deshacer operación completa",()=>work(async signal=>{const result=await S.undo(plan.id,{signal,confirm:confirmUI});message(result.status==="undone"?"Operación deshecha.":"No se modificó la operación.");}));changes.appendChild(details);
  }refreshUsage();}
- function collections(){const select=$("research-collections");const previous=new Set([...select.selectedOptions].map(o=>Number(o.value)));select.replaceChildren();for(const library of Zotero.Libraries.getAll().filter(l=>["user","group"].includes(l.libraryType))){const group=el("optgroup");group.label=library.name||Zotero.Libraries.getName(library.libraryID);for(const c of Zotero.Collections.getByLibrary(library.libraryID,true)){const names=[c.name],seen=new Set([c.id]);let ancestor=c.parentID;while(ancestor&&!seen.has(ancestor)){seen.add(ancestor);const parent=Zotero.Collections.get(ancestor);if(!parent)break;names.unshift(parent.name);ancestor=parent.parentID;}const option=el("option",names.join(" / "));option.value=c.id;option.title=names.join(" / ")+" · Incluye subcolecciones";group.appendChild(option);}select.appendChild(group);}
-  if(previous.size){for(const o of select.options)o.selected=previous.has(Number(o.value));}
+ function collections({preserveSelection=false}={}){const select=$("research-collections");const previous=new Set([...select.selectedOptions].map(o=>Number(o.value)));select.replaceChildren();for(const library of Zotero.Libraries.getAll().filter(l=>["user","group"].includes(l.libraryType))){const group=el("optgroup");group.label=library.name||Zotero.Libraries.getName(library.libraryID);for(const c of Zotero.Collections.getByLibrary(library.libraryID,true)){const names=[c.name],seen=new Set([c.id]);let ancestor=c.parentID;while(ancestor&&!seen.has(ancestor)){seen.add(ancestor);const parent=Zotero.Collections.get(ancestor);if(!parent)break;names.unshift(parent.name);ancestor=parent.parentID;}const option=el("option",names.join(" / "));option.value=c.id;option.title=names.join(" / ")+" · Incluye subcolecciones";group.appendChild(option);}select.appendChild(group);}
+  if(previous.size||preserveSelection){for(const o of select.options)o.selected=previous.has(Number(o.value));}
   else try{for(const c of Zotero.getActiveZoteroPane().getSelectedCollections())for(const o of select.options)if(Number(o.value)===c.id)o.selected=true;}catch(_){}
  }
  const panel=$("research-panel");
@@ -135,9 +138,9 @@
  $("research-start").addEventListener("click",()=>work(async signal=>{if(!ZIA.isConfigured())throw Error("Configura tu IA antes de iniciar un análisis.");const run=await R.createRun(selected(),$("research-objective").value);refresh();const result=await R.process(run.id,{signal,onProgress:p=>message("Analizados "+p.done+" de "+p.total+": "+p.title)});matrix(result);message(status[result.status]||result.status);}));
  $("research-search").addEventListener("click",()=>work(async signal=>{const result=await R.search({consulta:$("research-query").value,coleccion_ids:selected()},{signal,onProgress:p=>message("Buscando en "+p.done+" de "+p.total+" documentos…")});const box=$("research-passage-results");box.replaceChildren();box.appendChild(el("p",result.results.length+" pasajes · "+result.analyzed+" / "+result.total+" documentos · "+result.method+(result.omitted?" · "+result.omitted+" documentos fuera del límite de esta búsqueda":"")));for(const e of result.results)evidenceCard(box,e);for(const issue of result.issues)box.appendChild(el("p","Documento "+issue.id+": "+issue.error));showResults(resultViews[0]);message("Búsqueda local terminada.");}));
  $("research-save-limits").addEventListener("click",()=>{for(const [id,key,min,max] of [["research-request-limit","taskRequestLimit",1,10000],["research-token-limit","taskTokenLimit",1000,10000000],["research-output-limit","responseTokenLimit",100,16000]]){const value=Number($(id).value);if(!Number.isInteger(value)||value<min||value>max){message("Revisa los límites: valores fuera de rango.");return;}}
-  Zotero.Prefs.set(ZIA.P+"taskRequestLimit",Number($("research-request-limit").value),true);Zotero.Prefs.set(ZIA.P+"taskTokenLimit",Number($("research-token-limit").value),true);Zotero.Prefs.set(ZIA.P+"responseTokenLimit",Number($("research-output-limit").value),true);Zotero.Prefs.set(ZIA.P+"researchCache",$("research-cache").checked,true);message("Límites guardados. Se aplican también al continuar una tarea existente.");refreshUsage();
+  Zotero.Prefs.set(ZIA.P+"taskBudgetEnabled",$("research-budget-enabled").checked,true);Zotero.Prefs.set(ZIA.P+"taskRequestLimit",Number($("research-request-limit").value),true);Zotero.Prefs.set(ZIA.P+"taskTokenLimit",Number($("research-token-limit").value),true);Zotero.Prefs.set(ZIA.P+"responseTokenLimit",Number($("research-output-limit").value),true);Zotero.Prefs.set(ZIA.P+"researchCache",$("research-cache").checked,true);message("Opciones guardadas. "+($("research-budget-enabled").checked?"El límite opcional está activo.":"Las tareas continúan sin un tope acumulado del plugin."));refreshUsage();
  });
- const limits=R.settings();$("research-request-limit").value=limits.requests;$("research-token-limit").value=limits.tokens;$("research-output-limit").value=limits.output;$("research-cache").checked=limits.cache;
+ const limits=R.settings();$("research-budget-enabled").checked=limits.enabled===true;$("research-request-limit").value=limits.requests;$("research-token-limit").value=limits.tokens;$("research-output-limit").value=limits.output;$("research-cache").checked=limits.cache;
  document.addEventListener("click",event=>ZIA.handleResultLink(event,e=>message(e.message)));
  window.addEventListener("focus",()=>{if(!panel.hidden)refreshUsage();});ZIA.onResearchChanged=refresh;
 })();

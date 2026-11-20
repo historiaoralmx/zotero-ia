@@ -14,19 +14,29 @@
     reviewBudget(budget) {
       this.show("settings");
       const requests=$("research-request-limit"),tokens=$("research-token-limit");
+      $("research-budget-enabled").checked=true;
       if(budget.kind==="requests")requests.value=Math.min(10000,Math.max(Number(requests.value)||20,budget.requests+10));
       if(budget.kind==="tokens")tokens.value=Math.min(10000000,Math.max(Number(tokens.value)||60000,Math.ceil((budget.tokens+budget.nextEstimate*4)/1000)*1000));
       const input=budget.kind==="requests"?requests:tokens;const details=input.closest?.("details");if(details)details.open=true;input.focus();
-      $("research-usage").textContent="Se propone un margen para continuar. Revisa los valores y pulsa Guardar límites para aplicarlos. Se aplican a las tareas del plugin; no cambian la cuota del proveedor.";
+      $("research-usage").textContent="Se propone un margen para continuar. Revisa los valores y pulsa Guardar opciones para aplicarlos. Se aplican a las tareas del plugin; no cambian la cuota del proveedor.";
     },
     budgetNotice(budget,continueTask,continueLabel="Continuar") {
       if(!budget)return;const box=$("workspace-budget-notice");if(!box)return;
       box.replaceChildren();box.hidden=false;
-      box.appendChild(el("strong","Pausa por el límite del plugin"));
-      box.appendChild(el("p",budget.kind==="requests"?budget.requests+" / "+budget.maxRequests+" solicitudes de esta tarea.":budget.tokens+" tokens acumulados + "+budget.nextEstimate+" estimados para la siguiente consulta; máximo configurado: "+budget.maxTokens+"."));
-      box.appendChild(el("p","Este límite es independiente del proveedor de IA y no cambia al poner otra clave."));
+      box.appendChild(el("strong","Límite opcional de la tarea"));
+      box.appendChild(el("p","Se alcanzó el límite que activaste en Ajustes. El avance está guardado. Puedes desactivarlo y continuar."));
+      box.appendChild(el("p","Es independiente del proveedor de IA."));
       action(box,"Revisar límites",()=>this.reviewBudget(budget));
       if(continueTask&&budget.nextEstimate<=budget.maxTokens)action(box,continueLabel,async()=>{if(busy)throw Error("Espera a que termine la operación actual.");await continueTask();});
+      action(box,"Cerrar aviso",()=>this.clearBudget());
+    },
+    providerNotice(error) {
+      if(error?.name!=="ProviderError"||error.status!==429)return;
+      const box=$("workspace-budget-notice");if(!box)return;
+      box.replaceChildren();box.hidden=false;
+      box.appendChild(el("strong",error.quotaKind==="daily"?"Cuota diaria del modelo agotada":"Límite de uso del proveedor"));
+      box.appendChild(el("p",error.message));
+      action(box,"Cambiar modelo",async()=>ZIA.openPrefs());
       action(box,"Cerrar aviso",()=>this.clearBudget());
     },
     show(key) {
@@ -35,14 +45,16 @@
       for(const [name,id] of Object.entries(panels)){
         $(id).hidden=name!==key;nav(name).setAttribute("aria-selected",String(name===key));nav(name).tabIndex=name===key?0:-1;
       }
-      if(key==="analysis")$("research-toggle").setAttribute("aria-expanded","true");else $("research-toggle").setAttribute("aria-expanded","false");
+      if(key==="analysis"){applyProject(P.current(),{preserveObjective:true});$("research-toggle").setAttribute("aria-expanded","true");}else $("research-toggle").setAttribute("aria-expanded","false");
       if(key==="results")ZIA.researchUI.refresh();
       if(key==="related")ZIA.incitefulUI?.refreshSelection();
+      if(key==="chat")ZIA.importUI?.collections();
     },
     activity() {
       $("workspace-stop").disabled=!busy;
-      const source=this.source==="analysis"?"research-status":this.source==="related"?"related-status":"st";
+      const source=this.source==="analysis"?"research-status":this.source==="related"?"related-status":this.source==="import"?"import-status":"st";
       $("workspace-activity").textContent=busy?($(source).textContent||"Tarea en curso…"):(this.notice||"Sin tarea en curso");
+      if(!busy)ZIA.documentActions?.drain();
     },
   };
   function action(parent,label,handler){const b=el("button",label);b.type="button";b.addEventListener("click",()=>Promise.resolve().then(handler).catch(e=>message(e.message)));parent.appendChild(b);return b;}
@@ -59,13 +71,13 @@
       select.appendChild(group);
     }
   }
-  function applyProject(project){
-    ZIA.researchUI.collections();
+  function applyProject(project,{preserveObjective=false}={}){
+    ZIA.researchUI.collections({preserveSelection:preserveObjective});
     $("research-collections").disabled=!!project;
     if(project){
       const choices=new Set(project.collectionIds);
       for(const option of $("research-collections").options)option.selected=choices.has(Number(option.value));
-      $("research-objective").value=project.objective;
+      if(!preserveObjective)$("research-objective").value=project.objective;
     }
     const available=new Set([...$("research-collections").options].map(o=>Number(o.value)));
     const missing=project?.collectionIds.some(id=>!available.has(id));
@@ -119,6 +131,7 @@
     });
   }
   $("workspace-configure").addEventListener("click",()=>ZIA.openPrefs());$("workspace-settings-provider").addEventListener("click",()=>ZIA.openPrefs());
+  $("workspace-help-manual").addEventListener("click",()=>ZIA.help?.openManual());
   $("workspace-new-project").addEventListener("click",()=>{try{edit(null);}catch(e){message(e.message);}});
   $("workspace-cancel-project").addEventListener("click",()=>{$("workspace-project-form").hidden=true;message("");});
   $("workspace-default-columns").addEventListener("click",()=>{$("workspace-project-columns").value=ZIA.matrixColumns.toText();});
@@ -132,6 +145,10 @@
   });
   $("workspace-task-filter").addEventListener("change",()=>ZIA.researchUI.refresh());
   $("research-collections").addEventListener("change",()=>{if(!P.current()){$("research-start").disabled=!$("research-collections").selectedOptions.length;$("research-search").disabled=$("research-start").disabled;}});
+  $("research-refresh-collections").addEventListener("click",()=>{
+    try{applyProject(P.current(),{preserveObjective:true});$("research-collections-status").textContent="Colecciones actualizadas. Disponibles: "+$("research-collections").options.length+".";}
+    catch(e){$("research-collections-status").textContent="No se pudieron actualizar las colecciones: "+e.message;}
+  });
   $("workspace-stop").addEventListener("click",()=>ctrl?.abort());
   const originalRefresh=ZIA.onResearchChanged;
   ZIA.onResearchChanged=()=>{originalRefresh?.();render();W.activity();};

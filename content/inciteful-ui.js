@@ -20,6 +20,7 @@
     searchButton.disabled = busy || !selection.seeds.length;
     refreshButton.disabled = busy;
     saveButton.disabled = busy || !rows.some(row => row.checkbox.checked && !row.checkbox.disabled);
+    for (const row of rows) row.pdfButton.disabled = busy || row.hasPDF;
   }
 
   function refreshSelection() {
@@ -66,12 +67,26 @@
       if (meta) row.appendChild(element("p", meta));
       const open = element("button", "Abrir publicación");
       open.type = "button";
-      open.addEventListener("click", () => Zotero.launchURL(paper.url));
       const outcome = element("p");
       outcome.setAttribute("role", "status");
-      row.append(open, outcome);
+      open.addEventListener("click", async () => {try {await Zotero.launchURL(paper.url);} catch (error) {outcome.textContent = error.message;}});
+      const pdfButton = element("button", "Obtener PDF");pdfButton.type = "button";
+      const pdfResult = element("div");
+      const state = {paper, checkbox, outcome, pdfButton, hasPDF: false};
+      pdfButton.addEventListener("click", () => run(async signal => {
+        status.textContent = "Guardando la referencia y buscando su PDF…";
+        outcome.textContent = "Buscando con Zotero y los enlaces de OpenAlex. No consume tokens de IA.";
+        const result = await ZIA.inciteful.obtainPDF(paper, destination?.id, signal);
+        state.hasPDF = result.busqueda.pdf_encontrado.includes(result.item_id);
+        checkbox.checked = false;checkbox.disabled = true;
+        pdfButton.textContent = state.hasPDF ? "PDF disponible" : "Obtener PDF";
+        outcome.textContent = state.hasPDF ? "Referencia guardada y PDF local comprobado." : "Referencia guardada. No se consiguió el PDF; puedes abrir la página de la publicación abajo.";
+        pdfResult.replaceChildren();ZIA.pdfs.render(document, pdfResult, result.busqueda);
+        status.textContent = outcome.textContent;
+      }));
+      row.append(open, pdfButton, outcome, pdfResult);
       list.appendChild(row);
-      rows.push({ paper, checkbox, outcome });
+      rows.push(state);
     }
     $("related-results").hidden = !rows.length;
     updateButtons();

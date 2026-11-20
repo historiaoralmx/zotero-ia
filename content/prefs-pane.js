@@ -6,7 +6,7 @@ ZoteroIA.initPrefs = function (document) {
     fields: ["baseURL", "apiKey", "model", "maxChars", "systemPrompt", "openalexKey"],
     presets: {
       local: {baseURL: "http://localhost:11434/v1", model: "qwen3"},
-      gemini: {baseURL: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-3.6-flash"},
+      gemini: {baseURL: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-4-hydrogen"},
       zai: {baseURL: "https://api.z.ai/api/paas/v4", model: "glm-4.7-flash"},
       openai: {baseURL: "https://api.openai.com/v1", model: "gpt-4o-mini"},
       claude: {baseURL: "https://api.anthropic.com/v1", model: "claude-sonnet-5-5"},
@@ -24,6 +24,7 @@ ZoteroIA.initPrefs = function (document) {
     el(id) { return document.getElementById("zia-" + id); },
     pref(k) { const value=Zotero.Prefs.get(this.P + k, true); return k==="provider"&&value==="anthropic"?"claude":value; },
     init() {
+      Z.help?.bindPreferences(document);
       for (const f of this.fields) {
         this.el(f).value = String(this.pref(f) ?? "");
         this.el(f).addEventListener("input", () => this.save());
@@ -91,6 +92,7 @@ ZoteroIA.initPrefs = function (document) {
       const previous = this.pref("provider"), current = this.el("model").value;
       if (previous !== name) {
         this.el("apiKey").value = "";
+        this.el("check-backups").checked = false;
         this.el("free-confirmed").checked = false;
         Zotero.Prefs.set(this.P + "freeTierConfirmed", false, true);
       }
@@ -130,7 +132,9 @@ ZoteroIA.initPrefs = function (document) {
       this.el("free-zai").hidden = provider !== "zai";
       this.el("free-policy").hidden = !restricted;
       this.el("gemini-confirm-row").hidden = provider !== "gemini";
+      this.el("gemini-check-options").hidden = !restricted || provider !== "gemini";
       this.el("detect").hidden = !restricted;
+      this.el("detect").textContent = provider === "zai" ? "Ver modelos para comprobar" : "Detectar modelos";
       this.el("baseURL").readOnly = restricted;
       this.el("model").readOnly = restricted;
       this.el("test").textContent = restricted ? "Comprobar conexión" : "Probar conexión";
@@ -140,11 +144,14 @@ ZoteroIA.initPrefs = function (document) {
         const option = document.createElementNS("http://www.w3.org/1999/xhtml", "option");
         option.value = value; option.textContent = label; select.appendChild(option);
       };
-      add("", "El plugin elegirá uno al comprobar la conexión");
-      for (const m of Z.modelPolicy.catalog) add(m, m + (Z.modelPolicy.current() && Z.modelPolicy.verified.includes(m) ? " · comprobado" : " · sin comprobar"));
-      select.value = Z.modelPolicy.catalog.includes(selected) ? selected : "";
+      const manual = restricted && provider === "gemini";
+      const choices = manual ? Z.modelPolicy.service().allowed : Z.modelPolicy.catalog;
+      add("", manual ? "Elige un modelo para comprobar" : "El plugin elegirá uno al comprobar la conexión");
+      for (const m of choices) add(m, m + (Z.modelPolicy.current() && Z.modelPolicy.verified.includes(m) ? " · comprobado" : " · sin comprobar"));
+      select.value = choices.includes(selected) ? selected : "";
       this.el("policy-status").textContent = !restricted ? "" : Z.modelPolicy.current() && Z.modelPolicy.verified.includes(selected)
         ? "Listo para comenzar. Modelos alternativos preparados: " + Z.modelPolicy.verified.filter(m => m !== selected).length + ". Si uno falla, el plugin intentará otro de los comprobados."
+        : manual ? "Falta comprobar la conexión. Elige un modelo y pulsa «Comprobar conexión»."
         : "Falta comprobar la conexión. Pulsa «Comprobar conexión» para que el plugin elija un modelo compatible.";
     },
     setBusy(value) {
@@ -156,10 +163,10 @@ ZoteroIA.initPrefs = function (document) {
       if (this.busy) return;
       this.save(); this.setBusy(true);
       const out = this.el("test-result");
-      out.className = ""; out.textContent = "Consultando el catálogo del proveedor…";
+      out.className = ""; out.textContent = this.pref("provider") === "zai" ? "Preparando los modelos gratuitos para comprobar…" : "Consultando el catálogo del proveedor…";
       try {
         const models = await Z.modelPolicy.detect();
-        out.textContent = "Modelos detectados: " + models.join(", ") + ". Falta comprobar acceso y herramientas.";
+        out.textContent = (this.pref("provider") === "zai" ? "Modelos gratuitos para comprobar: " : "Modelos detectados: ") + models.join(", ") + ". Falta comprobar acceso y herramientas.";
       } catch (e) { out.className = "zia-bad"; out.textContent = "✘ " + e.message; }
       finally { this.setBusy(false); this.renderPolicy(); }
     },
@@ -170,20 +177,29 @@ ZoteroIA.initPrefs = function (document) {
       out.className = ""; this.el("test-details").textContent = "";
       try {
         if (Z.modelPolicy.restricted()) {
-          const result = await Z.modelPolicy.prepare(message => { out.textContent = "Comprobando la conexión y preparando la IA…"; this.el("test-details").textContent = message; });
+          const selectedOnly = this.pref("provider") === "gemini" && !this.el("check-backups").checked;
+          const result = await Z.modelPolicy.prepare(message => { out.textContent = message; this.el("test-details").textContent = message; }, {selectedOnly});
           this.el("model").value = result.model;
-          out.className = "zia-ok";
-          this.el("test-details").textContent = result.results.map(r => (r.ok ? "✔ " : "✘ ") + r.model + (r.ok ? ": conexión y herramientas comprobadas" : ": " + r.error)).join("\n")
+          out.className = result.retained ? "" : "zia-ok";
+          this.el("test-details").textContent = result.results.map(r => (r.ok ? "✔ " : "✘ ") + r.model + (r.ok ? ": conexión y herramientas comprobadas" : ": " + r.error + (r.retained ? " · comprobación anterior conservada" : ""))).join("\n")
             + "\nSeleccionado: " + result.model + ". Respaldos comprobados: " + (result.backups.join(", ") || "ninguno") + ".\nEsta prueba no modifica tu biblioteca. Los límites y pagos se administran en tu cuenta del proveedor.";
-          out.textContent = "✔ Conexión lista. Ya puedes trabajar con Zotero IA.";
+          out.textContent = result.retained
+            ? "El servicio no respondió en algunas pruebas. Se conserva la comprobación anterior de los modelos afectados. Puedes intentar trabajar; su disponibilidad depende del proveedor."
+            : "✔ Conexión lista. Ya puedes trabajar con Zotero IA.";
         } else {
-          out.textContent = "Probando el modelo seleccionado (máximo 20 segundos)…";
+          out.textContent = "Probando el modelo seleccionado (máximo 45 segundos)…";
           const t0 = Date.now();
           await Z.chat([{role: "user", content: "Responde solo: OK"}], {testOnly: true});
           out.className = "zia-ok";
           out.textContent = "✔ Conexión comprobada: " + Z.lastModel + " (" + Math.round((Date.now() - t0) / 1000) + " s). Esta prueba no comprueba herramientas, cuota futura ni facturación.";
         }
-      } catch (e) { out.className = "zia-bad"; out.textContent = "✘ " + e.message; }
+      } catch (e) {
+        out.className = "zia-bad";
+        out.textContent = "✘ " + e.message;
+        if (e.name === "ModelCheckTemporaryError") {
+          this.el("test-details").textContent = Z.modelPolicy.results.map(result => result.model + ": " + result.error).join("\n");
+        }
+      }
       finally { this.setBusy(false); this.renderPolicy(); }
     },
   };

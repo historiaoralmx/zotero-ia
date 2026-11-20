@@ -1,4 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
+<?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
 <window xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" xmlns:html="http://www.w3.org/1999/xhtml" windowtype="zotero-ia:agent" title="Zotero IA · Investigación" width="1080" height="780">
   <html:style>
     :root { color-scheme: light dark; --zia-bg: var(--material-background, Canvas); --zia-text: var(--fill-primary, CanvasText); --zia-muted: var(--fill-secondary, GrayText); --zia-edge: var(--material-border, color-mix(in srgb, CanvasText 16%, transparent)); --zia-accent: var(--accent-blue, AccentColor); --zia-soft: color-mix(in srgb, var(--zia-accent) 9%, var(--zia-bg)); --zia-hover: color-mix(in srgb, var(--zia-accent) 14%, var(--zia-bg)); }
@@ -145,7 +146,7 @@
             <html:input id="workspace-project-title" type="text" maxlength="120" required="required" />
             <html:label for="workspace-project-objective">Pregunta u objetivo</html:label>
             <html:textarea id="workspace-project-objective" rows="2" maxlength="2000" required="required" />
-            <html:label for="workspace-project-columns">Columnas de la matriz</html:label>
+            <html:label for="workspace-project-columns">Columnas de la tabla comparativa</html:label>
             <html:textarea id="workspace-project-columns" rows="5" maxlength="4000" aria-describedby="workspace-columns-help" />
             <html:p id="workspace-columns-help" class="workspace-hint">Una columna por línea, entre 1 y 10. Por ejemplo: Periodo histórico, Archivo consultado o Población de estudio, cada uno en su línea. Puedes precisar una columna así: Periodo histórico | Identifica las fechas que estudia el documento.</html:p>
             <html:button type="button" id="workspace-default-columns">Restablecer columnas habituales</html:button>
@@ -168,6 +169,8 @@
             <html:h2>1. Selecciona los documentos</html:h2>
             <html:label for="research-collections">Colecciones de Zotero</html:label>
             <html:select id="research-collections" multiple="multiple" size="5" style="width:100%" />
+            <html:button id="research-refresh-collections" type="button">Actualizar colecciones</html:button>
+            <html:small id="research-collections-status" role="status" aria-live="polite" />
             <html:p class="workspace-hint">Incluye subcolecciones. Puedes seleccionar varias con Ctrl o ⌘.</html:p>
           </html:section>
           <html:section class="workspace-card">
@@ -175,8 +178,8 @@
             <html:label for="research-objective">Pregunta u objetivo de lectura</html:label>
             <html:textarea id="research-objective" rows="2">Comparar tesis, metodología, fuentes, conceptos y limitaciones.</html:textarea>
             <html:p id="research-columns-summary" class="workspace-hint" />
-            <html:button id="research-start" class="primary">Analizar y crear matriz</html:button>
-            <html:p class="workspace-hint">Se guarda el avance para continuar más tarde. Encontrarás las fichas y la matriz en Resultados.</html:p>
+            <html:button id="research-start" class="primary">Analizar y crear tabla comparativa</html:button>
+            <html:p class="workspace-hint">Se guarda el avance para continuar más tarde. Encontrarás las fichas y la tabla comparativa en Resultados.</html:p>
           </html:section>
           <html:section class="workspace-card">
             <html:h2>Buscar evidencia puntual</html:h2>
@@ -189,7 +192,7 @@
         </html:section>
         <html:section id="workspace-results" role="tabpanel" aria-labelledby="workspace-nav-results" class="workspace-panel" hidden="hidden">
           <html:h1>Resultados y tareas</html:h1>
-          <html:p class="workspace-lead">Continúa un análisis guardado, consulta su matriz o vuelve a los pasajes encontrados.</html:p>
+          <html:p class="workspace-lead">Continúa un análisis guardado, consulta su tabla comparativa o vuelve a los pasajes encontrados.</html:p>
           <html:div class="workspace-toolbar">
             <html:label for="workspace-task-filter">Mostrar tareas</html:label>
             <html:select id="workspace-task-filter">
@@ -202,16 +205,35 @@
           <html:hr />
           <html:div id="research-result-controls" hidden="hidden" role="group" aria-label="Vistas de resultados" style="position:sticky;top:0;background:var(--zia-bg);padding:6px 0;z-index:1">
             <html:button id="research-show-passages" type="button" disabled="disabled" aria-pressed="false" aria-controls="research-passage-results">Pasajes</html:button>
-            <html:button id="research-show-matrix" type="button" disabled="disabled" aria-pressed="false" aria-controls="research-matrix-results">Matriz</html:button>
+            <html:button id="research-show-matrix" type="button" disabled="disabled" aria-pressed="false" aria-controls="research-matrix-results">Tabla comparativa</html:button>
           </html:div>
           <html:div id="research-passage-results" hidden="hidden" />
           <html:div id="research-matrix-results" hidden="hidden" />
         </html:section>
         <html:section id="workspace-chat" role="tabpanel" aria-labelledby="workspace-nav-chat" hidden="hidden" class="workspace-panel">
+          <html:div id="assistant-scroll" role="region" aria-label="Documentos y conversación" tabindex="0">
           <html:div class="workspace-chat-header">
             <html:h1>Asistente</html:h1>
             <html:p class="workspace-hint">Usa la selección o la colección abierta en Zotero. Para trabajar con las colecciones del proyecto, entra en Analizar.</html:p>
           </html:div>
+          <html:section class="workspace-card" id="import-panel" aria-label="Agregar documentos a Zotero">
+            <html:h2>Agregar documentos</html:h2>
+            <html:label for="import-destination">Colección de destino:</html:label>
+            <html:select id="import-destination" aria-label="Colección de destino de los documentos"/>
+            <html:button id="import-refresh" type="button">Actualizar colecciones</html:button>
+            <html:label for="import-type">Tipo de contenedor si Zotero no identifica el documento:</html:label>
+            <html:select id="import-type"><html:option value="document">Documento</html:option><html:option value="thesis">Tesis</html:option><html:option value="book">Libro</html:option><html:option value="journalArticle">Artículo de revista</html:option></html:select>
+            <html:div class="workspace-actions">
+              <html:button id="import-document" type="button">Agregar documento</html:button>
+              <html:button id="importPDFDir" type="button">Importar carpeta de PDF</html:button>
+            </html:div>
+            <html:p class="workspace-hint">Se copian a Zotero y se crea una referencia contenedora. Los originales se conservan. Los datos no reconocidos quedan por completar. No consume tokens de IA.</html:p>
+            <html:p id="import-status" role="status"/>
+            <html:details id="import-results-details" hidden="hidden">
+              <html:summary id="import-results-summary">Ver archivos importados</html:summary>
+              <html:div id="import-results"/>
+            </html:details>
+          </html:section>
           <html:details id="workspace-examples">
             <html:summary>Ejemplos de tareas</html:summary>
             <html:div class="goals">
@@ -229,11 +251,11 @@
               <html:div class="goal">
                 <html:b>🕸 Mapa de conocimiento</html:b>
                 <html:button data-map="true">Explorar mapa de mi colección</html:button>
-                <html:button data-t="Identifica y compara los conceptos, metodologías y debates presentes en la colección seleccionada, leyendo fuentes comprobables. Señala explícitamente qué relaciones son inferencias y cuáles están documentadas. Después construye mapa_conocimiento para mostrar las relaciones explícitas de Zotero.">Investigar relaciones documentales</html:button>
+                <html:button data-t="Investiga relaciones documentales en la colección seleccionada. Localiza sus documentos y recupera evidencias con leer_con_evidencia o buscar_pasajes para comparar al menos dos textos accesibles. Explica en lenguaje claro los conceptos, metodologías o debates que puedas comprobar, con enlaces a las evidencias; distingue las inferencias. Identifica los documentos examinados, los inaccesibles y la cobertura parcial. Después usa mapa_conocimiento para mostrar la red de autores y etiquetas de Zotero, aclarando que ese gráfico no representa por sí mismo los vínculos documentales analizados. Termina con una explicación breve, sin JSON ni listas de nodos técnicos.">Investigar relaciones documentales</html:button>
               </html:div>
               <html:div class="goal">
                 <html:b>✍️ Escribir mi estado del arte</html:b>
-                <html:button data-t="Haz una matriz comparativa (autor, año, tesis, fuentes, método) de la colección que tengo abierta y guárdala como nota.">Tabla comparativa de mi colección</html:button>
+                <html:button data-t="Haz una tabla comparativa (autor, año, tesis, fuentes, método) de la colección que tengo abierta y guárdala como nota.">Tabla comparativa de mi colección</html:button>
                 <html:button data-t="Redacta un borrador de estado del arte con los textos de la colección abierta, agrupado por temas, citando (Autor, año).">Borrador de estado del arte</html:button>
                 <html:button data-t="Según los textos de mi colección abierta, ¿qué temas o preguntas casi nadie ha estudiado?">Encontrar vacíos en lo publicado</html:button>
               </html:div>
@@ -251,7 +273,6 @@
               </html:div>
               <html:div class="goal">
                 <html:b>➕ Agregar referencias</html:b>
-                <html:button id="importPDFDir">📁 Importar carpeta de PDF (incluye subcarpetas)</html:button>
                 <html:button data-t="Agrega a mi biblioteca estas referencias (DOI o ISBN): ">Agregar por DOI o ISBN</html:button>
                 <html:button data-t="Busca en mi biblioteca si ya tengo un texto sobre: ">¿Ya tengo algo sobre…?</html:button>
               </html:div>
@@ -262,6 +283,7 @@
               <html:div class="hello">Hola 👋 ¿Qué quieres hacer hoy?</html:div>
               <html:div class="intro">Elige una tarea o escribe qué necesitas. Puedo analizar documentos, organizar referencias y trabajar con tus colecciones.</html:div>
             </html:div>
+          </html:div>
           </html:div>
           <html:div id="composer">
             <html:textarea id="q" rows="2" placeholder="Escribe qué necesitas… Enter para enviar · Shift+Enter para otra línea" aria-label="Instrucción para el asistente" />
@@ -276,6 +298,7 @@
         <html:section id="workspace-related" role="tabpanel" aria-labelledby="workspace-nav-related" class="workspace-panel" hidden="hidden">
           <html:h1>Trabajos relacionados</html:h1>
           <html:p>Encuentra bibliografía relacionada por sus citas. Inciteful recibe únicamente los identificadores que ves abajo. La búsqueda es directa y no usa tokens de IA.</html:p>
+          <html:p class="workspace-hint">Pulsa Obtener PDF en un resultado para guardar la referencia y buscar su archivo con Zotero y OpenAlex. Si ya tienes la referencia, se reutiliza. La disponibilidad del PDF depende de la publicación.</html:p>
           <html:p id="related-selection-note" />
           <html:ul id="related-seeds" />
           <html:div class="workspace-toolbar">
@@ -293,15 +316,22 @@
         </html:section>
         <html:section id="workspace-settings" role="tabpanel" aria-labelledby="workspace-nav-settings" class="workspace-panel" hidden="hidden">
           <html:h1>Ajustes y actividad</html:h1>
+          <html:section class="workspace-card">
+            <html:h2>Ayuda</html:h2>
+            <html:p>Consulta los pasos de uso y las soluciones a problemas frecuentes. El manual funciona sin internet y no consume tokens.</html:p>
+            <html:button id="workspace-help-manual" type="button">Ayuda y manual</html:button>
+          </html:section>
           <html:p class="workspace-lead">Configura tu IA, revisa el consumo y consulta los cambios que puedes deshacer.</html:p>
           <html:section class="workspace-card">
             <html:h2>Proveedor y conexión</html:h2>
             <html:p>La clave API y los modelos se configuran en las preferencias de Zotero IA.</html:p>
             <html:button id="workspace-settings-provider" type="button">Abrir configuración de IA</html:button>
           </html:section>
-          <html:details open="open">
-            <html:summary>Consumo y límites por tarea</html:summary>
-              <html:p>Estos límites los establece Zotero IA. Son independientes de la cuota y la facturación de tu proveedor; cambiar la clave no los reinicia.</html:p>
+          <html:details>
+            <html:summary>Opciones avanzadas de consumo</html:summary>
+            <html:p>El plugin continúa sin un tope acumulado propio. Si la API alcanza su cuota, mostrará un aviso y conservará el avance.</html:p>
+            <html:label><html:input id="research-budget-enabled" type="checkbox" />Establecer un límite propio por tarea (opcional)</html:label>
+            <html:p>Solo se aplican los dos límites siguientes si activas esta opción. Son independientes de la cuota de tu proveedor.</html:p>
             <html:p id="research-usage" />
             <html:label>Máximo de solicitudes <html:input id="research-request-limit" type="number" min="1" max="10000" />
             </html:label>
@@ -311,7 +341,7 @@
             </html:label>
             <html:label>
               <html:input id="research-cache" type="checkbox" />Reutilizar respuestas locales de la misma fuente y pregunta</html:label>
-            <html:button id="research-save-limits">Guardar límites</html:button>
+            <html:button id="research-save-limits">Guardar opciones</html:button>
             <html:p>No se calcula dinero: el precio depende de tu proveedor. Los tokens sin reporte del servicio se marcan como estimados.</html:p>
           </html:details>
           <html:details>
@@ -322,8 +352,20 @@
       </html:main>
     </html:div>
   </html:div>
+  <html:style>
+    #import-panel {flex-shrink:0;margin:0 0 10px;padding:10px 12px;}
+    #import-panel h2 {font-size:14px;margin:0 0 7px;}
+    #import-panel label {font-size:12px;margin-right:6px;}
+    #import-panel select {max-width:100%;box-sizing:border-box;margin:4px 6px 4px 0;}
+    #import-destination {max-width:420px!important;}
+    #import-results {max-height:none;overflow:visible;}
+    #import-status:empty,#import-results:empty {display:none;}
+    #import-panel .workspace-hint {margin:6px 0 0;}
+  </html:style>
   <script src="agent-window.js" />
   <script src="research-ui.js" />
   <script src="workspace-ui.js" />
+  <script src="import-ui.js" />
   <script src="inciteful-ui.js" />
+  <script src="document-actions.js" />
 </window>

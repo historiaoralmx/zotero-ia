@@ -56,6 +56,12 @@
 .research-task small { color:var(--zia-muted); }
 .research-task .workspace-secondary-actions { margin-top:8px; }
 #workspace-chat { display:flex; flex-direction:column; padding:0; overflow:hidden; scrollbar-gutter:auto; }
+#assistant-scroll { flex:1 1 0; min-height:0; min-width:0; overflow:auto; scrollbar-gutter:stable; overscroll-behavior:contain; }
+#workspace-chat #log { flex:none; overflow:visible; min-height:0; }
+#workspace-chat #workspace-examples .goals { max-height:none; overflow:visible; }
+#workspace-chat #composer { flex:none; min-width:0; }
+#import-results-details { margin-top:8px; }
+#import-results-summary { cursor:pointer; font-size:12px; padding:6px 0; }
 .workspace-chat-header { flex:none; padding:20px 20px 6px; }
 .workspace-chat-header h1 { font-size:20px; }
 .workspace-chat-header p { margin:5px 0; }

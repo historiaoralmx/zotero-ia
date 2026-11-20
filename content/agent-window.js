@@ -13,6 +13,7 @@ var ctrl = null;
 
 const $ = id => document.getElementById(id);
 const log = $("log");
+const conversationScroll = $("assistant-scroll") || log;
 
 async function savePNG(blob,name) {
  const fp=Components.classes["@mozilla.org/filepicker;1"].createInstance(Components.interfaces.nsIFilePicker);
@@ -30,11 +31,13 @@ function add(cls, html, isText, isMarkdown=false) {
   else if (isText) d.textContent = html;
   else { try { d.innerHTML = html; } catch (_) { d.textContent = html; } }
   log.appendChild(d);
-  log.scrollTop = log.scrollHeight;
+  conversationScroll.scrollTop = conversationScroll.scrollHeight;
   return d;
 }
 
 const LABELS = {
+  extraer_metadatos_pdf: () => "Leyendo los datos editoriales del PDF adjunto",
+  completar_metadatos_pdf: () => "Completando la referencia desde su PDF adjunto",
   mapa_conocimiento: () => "🕸 Construyendo mapa de conocimiento",
   buscar_web: a => `🌐 Buscando en internet: «${a.consulta}»`,
   auditar_coleccion: () => "📋 Auditando referencias y adjuntos de la colección",
@@ -45,6 +48,14 @@ const LABELS = {
   listar_colecciones: () => "📁 Revisando colecciones",
   items_de_coleccion: () => "📁 Abriendo la colección",
   seleccion_actual: () => "👆 Viendo tu selección",
+  pdf_abierto: () => "📄 Identificando el PDF abierto",
+  leer_anotaciones_pdf: () => "📑 Leyendo anotaciones del PDF",
+  crear_nota_desde_anotaciones: () => "📝 Creando nota con las anotaciones del PDF",
+  guardar_lectura_como_nota: () => "📝 Guardando lectura con citas de Zotero",
+  guardar_ficha_como_nota: () => "📝 Guardando ficha con citas de Zotero",
+  guardar_tabla_como_nota: () => "📝 Guardando tabla con citas de Zotero",
+  exportar_word: () => "📄 Preparando el documento Word",
+  generar_informe_zotero: () => "📋 Abriendo el informe nativo de Zotero",
   leer_item: a => `📖 Leyendo un documento` + (a.desde ? " (continuación)" : ""),
   analizar_coleccion_lote: a => `📚 Analizando lote de colección ${a.coleccion_id} desde posición ${a.desde || 0} (máximo ${Math.min(5, a.limite || 3)} documentos)`,
   ver_avance_coleccion: a => `📍 Consultando avance de colección ${a.coleccion_id}`,
@@ -78,7 +89,19 @@ function addCreatedNote(result) {
   b.textContent = "Abrir nota en Zotero";
   b.addEventListener("click", () => openCreatedNote(id));
   box.appendChild(b);
-  log.scrollTop = log.scrollHeight;
+  conversationScroll.scrollTop = conversationScroll.scrollHeight;
+}
+
+function addExportedWord(result) {
+  if(result?.estado!=="GUARDADO")return;
+  const box=add("t","Word guardado en: "+result.ruta,true);
+  const open=document.createElementNS("http://www.w3.org/1999/xhtml","button");
+  open.type="button";open.textContent="Abrir documento";
+  open.addEventListener("click",()=>{
+    try{Zotero.launchFile(result.ruta);}
+    catch(error){add("e","No se pudo abrir el documento: "+error.message,true);}
+  });
+  box.appendChild(open);
 }
 
 function renderKnowledgeMap(data) {
@@ -141,6 +164,14 @@ function renderKnowledgeMap(data) {
     }catch(e){selected.textContent="Error al exportar: "+e.message;}
   });
   header.appendChild(controls);root.appendChild(header);
+  const summary=ZIA.summarizeKnowledgeMap(data);
+  const overview=document.createElementNS("http://www.w3.org/1999/xhtml","p");
+  overview.className="graph-summary";
+  overview.textContent=summary.documentos_incluidos+" de "+summary.total_documentos+" documentos · Autores: "+summary.autores+" · Etiquetas: "+summary.etiquetas+". "+
+    (summary.total_autores_compartidos||summary.total_etiquetas_compartidas
+      ? "Autores compartidos: "+summary.total_autores_compartidos+" · Etiquetas compartidas: "+summary.total_etiquetas_compartidas+"."
+      : "No hay autores ni etiquetas compartidos entre los documentos incluidos. Esto no descarta relaciones en sus textos.");
+  root.appendChild(overview);
   const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
   svg.setAttribute("viewBox","0 0 740 420");svg.setAttribute("role","img");
   svg.setAttribute("aria-label","Red de autores, publicaciones y etiquetas");root.appendChild(svg);
@@ -334,7 +365,7 @@ function renderKnowledgeMap(data) {
   draw();
   const note=document.createElementNS("http://www.w3.org/1999/xhtml","p");note.className="graph-info";
   note.textContent="Importante: las etiquetas representan términos catalogados, no prueban acuerdos, citas ni contradicciones. Estos requieren análisis verificable de documentos.";root.appendChild(note);
-  log.scrollTop=log.scrollHeight;
+  conversationScroll.scrollTop=conversationScroll.scrollHeight;
 }
 
 function confirmUI(text,signal=ctrl?.signal?.aborted?null:ctrl?.signal) {
@@ -371,7 +402,7 @@ async function send(text) {
   ZIA.workspace?.show("chat");
   busy = true; ZIA.workspace?.setActivity("chat"); $("send").disabled = true; $("stop").disabled = false; $("q").value = "";
   ctrl = new AbortController();
-  if (!ZIA.isConfigured()) { checkSetup(); busy = false; $("send").disabled = false; $("stop").disabled = true; return; }
+  if (!ZIA.isConfigured()&&!ZIA.nativeReports?.command(text)&&!ZIA.readerContext?.command(text)) { checkSetup(); busy = false; $("send").disabled = false; $("stop").disabled = true; return; }
   const w = $("welcome"); if (w) w.remove();
   add("u", text, true);
   chatHistory.push({ role: "user", content: text });
@@ -382,7 +413,7 @@ async function send(text) {
       confirm: confirmUI,
       onEvent: (type, d) => {
         if (type === "plan") { add("t", "📋 Plan de tarea: " + d.plan.stages.join(" → "), true); }
-        else if (type === "ejecutada") { $("st").textContent = "Operación completada"; if (d.name === "crear_nota") addCreatedNote(d.result); if (d.name === "mapa_conocimiento") renderKnowledgeMap(d.result); if (d.name === "buscar_pdf_disponible") { const box=add("pdf-result", ""); ZIA.pdfs.render(document,box,d.result); log.scrollTop=log.scrollHeight; } }
+        else if (type === "ejecutada") { $("st").textContent = "Operación completada"; if (["crear_nota","crear_nota_desde_anotaciones","guardar_lectura_como_nota","guardar_ficha_como_nota","guardar_tabla_como_nota"].includes(d.name)) addCreatedNote(d.result); if(d.name==="exportar_word")addExportedWord(d.result); if (d.name === "mapa_conocimiento") renderKnowledgeMap(d.result); if (d.name === "buscar_pdf_disponible") { const box=add("pdf-result", ""); ZIA.pdfs.render(document,box,d.result); conversationScroll.scrollTop=conversationScroll.scrollHeight; } }
         else if (type === "rechazado") { add("t", "Operación rechazada: " + "la operación solicitada", true); }
         else if (type === "pensando") $("st").textContent = d.step === 0 ? "Pensando…" : "Trabajando… (paso " + (d.step + 1) + ")";
         else if (type === "herramienta") add("t", (LABELS[d.name] ? LABELS[d.name](d.args) : "Procesando la solicitud"), true);
@@ -398,94 +429,14 @@ async function send(text) {
       add("t",e.message+" El contexto disponible se conserva mientras esta ventana siga abierta.",true);
       ZIA.workspace?.budgetNotice(e.budget,()=>send("Continúa la tarea anterior desde el contexto disponible. Comprueba el estado de cualquier operación interrumpida antes de repetir cambios y no repitas las operaciones ya finalizadas."),"Continuar en otra etapa");
     }
-    else add("e", "Error: " + e.message, true);
+    else {add("e", "Error: " + e.message, true);ZIA.workspace?.providerNotice(e);}
   } finally {
     busy = false; $("send").disabled = false; $("stop").disabled = true; $("st").textContent = ZIA.lastModel ? "Modelo: "+ZIA.lastModel+(ZIA.lastFallback?" · respaldo":"") : ""; ZIA.onResearchChanged?.();
   }
 }
 
 
-// Importación local: selector de carpetas de Zotero/Firefox. No envía archivos a Gemini.
-async function importPDFFolder() {
-  const button=$('importPDFDir');
-  if(button.disabled) return;
-  if(busy){add('e','Termina primero la tarea actual del agente.',true);return;}
-  const main=Services.wm.getMostRecentWindow('navigator:browser');
-  const pane=main && (main.ZoteroPane||(main.Zotero&&main.Zotero.getActiveZoteroPane&&main.Zotero.getActiveZoteroPane()));
-  const chosen=pane&&pane.getSelectedCollections?pane.getSelectedCollections():[];
-  const col=chosen&&chosen[0];
-  if(!col){add('e','Selecciona primero una colección de destino en Zotero.',true);return;}
-  let folder;
-  try {
-    const C=Components.classes, I=Components.interfaces;
-    const picker=C['@mozilla.org/filepicker;1'].createInstance(I.nsIFilePicker);
-    // Gecko actual espera BrowsingContext en init(), no un objeto Window.
-    const parentContext = (window && window.browsingContext) || (main && main.browsingContext);
-    if (!parentContext) throw new Error('No se encontró el contexto de la ventana para seleccionar carpetas.');
-    picker.init(parentContext,'Selecciona una carpeta con PDF',I.nsIFilePicker.modeGetFolder);
-    const rv=await new Promise(resolve=>picker.open(resolve));
-    if(rv!==I.nsIFilePicker.returnOK) return;
-    folder=picker.file;
-    if(!folder || !folder.exists() || !folder.isDirectory())throw new Error('No se pudo acceder a la carpeta.');
-  } catch(e){add('e','No pude abrir la carpeta: '+e.message,true);return;}
-  const files=[];const stack=[folder];const LIMIT=500;
-  try {
-    while(stack.length){
-      const dir=stack.pop(),iter=dir.directoryEntries;
-      while(iter.hasMoreElements()){
-        const child=iter.getNext().QueryInterface(Components.interfaces.nsIFile);
-        if(child.isDirectory()){if(!child.isSymlink())stack.push(child);}
-        else if(child.isFile() && /\.pdf$/i.test(child.leafName)){files.push(child);if(files.length>LIMIT)throw new Error('Más de '+LIMIT+' PDF encontrados. Divide la carpeta para evitar una importación excesiva.');}
-      }
-    }
-  } catch(e){add('e','Error al examinar carpetas: '+e.message,true);return;}
-  if(!files.length){add('t','No encontré archivos PDF en esta carpeta.',true);return;}
-  // Una autorización para el lote completo. Nunca elimina ni modifica archivos de origen.
-  const approved=await confirmUI('Importar '+files.length+' PDF desde «'+folder.leafName+'» y sus subcarpetas a la colección «'+col.name+'»; intentar recuperar sus metadatos mediante el sistema nativo de Zotero. Los originales permanecerán en su carpeta.');
-  if(!approved)return;
-  button.disabled=true;
-  const summary={total:files.length,importados:0,reconocidos:0,sin_identificar:0,omitidos:0,errores:[]};
-  const imported=[];
-  const report=add('t','Importando PDF: 0/'+files.length,true);
-  try {
-    // Duplicados conservadores: solo omitir archivos cuyos nombres ya estén entre los adjuntos de esta colección.
-    const existing=new Set();
-    for(const item of col.getChildItems()){
-      if(item.isAttachment&&item.isAttachment()&&item.attachmentContentType==='application/pdf'){
-        try{const path=await item.getFilePathAsync();if(path)existing.add(path.split(/[\\/]/).pop().toLocaleLowerCase());}catch(_){}
-      }
-    }
-    for(let i=0;i<files.length;i++){
-      const f=files[i];
-      if(existing.has(f.leafName.toLocaleLowerCase())){summary.omitidos++;continue;}
-      try{
-        const item=await Zotero.Attachments.importFromFile({file:f,libraryID:col.libraryID,collections:[col.id],title:f.leafName});
-        if(item){imported.push(item);summary.importados++;existing.add(f.leafName.toLocaleLowerCase());}
-        else summary.errores.push(f.leafName+': no se creó adjunto');
-      }catch(e){summary.errores.push(f.leafName+': '+e.message);}
-      report.textContent='Importando PDF: '+(i+1)+'/'+files.length+' · Correctos: '+summary.importados+' · Errores: '+summary.errores.length;
-    }
-    const engine=Zotero.RecognizeDocument||Zotero.RecognizePDF;
-    if(engine&&typeof engine.recognizeItems==='function'){
-      for(let i=0;i<imported.length;i+=10){
-        const batch=imported.slice(i,i+10);
-        try{await engine.recognizeItems(batch);}catch(e){summary.errores.push('Reconocimiento lote '+(i/10+1)+': '+e.message);}
-        for(const item of batch){
-          const fresh=Zotero.Items.get(item.id);
-          if(fresh&&fresh.parentID)summary.reconocidos++;else summary.sin_identificar++;
-        }
-      }
-    }else{
-      summary.sin_identificar=imported.length;
-      summary.errores.push('Zotero no expone RecognizeDocument.recognizeItems en esta instalación. Puedes reconocer los PDF después con la función nativa.');
-    }
-    report.textContent='Importación en «'+col.name+'»: '+summary.importados+' PDF importados · '+summary.reconocidos+' con referencia padre detectada · '+summary.sin_identificar+' todavía independientes · '+summary.omitidos+' omitidos · '+summary.errores.length+' incidencias.';
-    if(summary.sin_identificar>0)add('t','Hay '+summary.sin_identificar+' PDF independientes. Son archivos importados, no entradas bibliográficas completas. Puedes pedir: «Reconoce los PDF independientes de esta colección», o seleccionar esos PDF en Zotero y usar «Recuperar metadatos de PDF».',true);
-    if(summary.errores.length)add('e','Incidencias (primeras 20):\n'+summary.errores.slice(0,20).join('\n'),true);
-    add('t','Los PDF originales siguen en su carpeta. Los duplicados se comparan solo por nombre dentro de esta colección; revisa los posibles duplicados bibliográficos con Zotero.',true);
-  }finally{button.disabled=false;}
-}
-$('importPDFDir').addEventListener('click',()=>importPDFFolder().catch(e=>add('e','Error de importación: '+e.message,true)));
+// Importación local: ver import-ui.js e imports.js.
 
 $("send").addEventListener("click", () => send($("q").value));
 $("q").addEventListener("keydown", e => {
