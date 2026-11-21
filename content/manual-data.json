@@ -1,5 +1,5 @@
 {
-  "version": "1.9.28",
+  "version": "1.9.29",
   "title": "Manual de usuario de Zotero IA",
   "author": "Humanistyc",
   "date": "20 de noviembre de 2026",
@@ -37,7 +37,7 @@
     {
       "id": "importar",
       "title": "Agregar documentos y crear su referencia",
-      "text": "En Asistente abre Agregar documentos. Elige la colección de destino y pulsa Actualizar colecciones si acabas de crearla. Selecciona el tipo de contenedor para los documentos que Zotero no identifique.\n\nAgregar documento abre el selector para elegir uno o varios archivos. Importar carpeta de PDF recorre la carpeta seleccionada y sus subcarpetas, con un máximo de 500 PDF por operación.\n\nLos archivos se copian a Zotero y los originales se conservan. Para PDF se intenta el reconocimiento bibliográfico nativo. Si Zotero reconoce el documento, se utiliza esa referencia. Si no, se crea una referencia provisional del tipo elegido, con los datos pendientes de completar, y se vincula el archivo. Revisa autoría, título y fecha antes de citarla.\n\nEl resumen distingue referencias reconocidas, contenedores por completar e incidencias. Despliega Ver archivos importados para examinar cada resultado y utiliza Ver en Zotero. Detener conserva lo ya importado. Esta importación no utiliza la API de IA; el reconocimiento puede depender de los servicios de Zotero."
+      "text": "En Asistente abre Agregar documentos. Elige la colección de destino y pulsa Actualizar colecciones si acabas de crearla. Selecciona el tipo de contenedor para los documentos que Zotero no identifique.\n\nAgregar documento abre el selector para elegir uno o varios archivos. Importar carpeta de PDF recorre la carpeta seleccionada y sus subcarpetas, con un máximo de 500 PDF por operación.\n\nLos archivos se copian a Zotero y los originales se conservan. Para PDF se intenta el reconocimiento bibliográfico nativo. Si Zotero reconoce el documento, se utiliza esa referencia. Si no, se crea una referencia provisional del tipo elegido, con los datos pendientes de completar, y se vincula el archivo. Revisa autoría, título y fecha antes de citarla.\n\nEl resumen distingue referencias reconocidas, contenedores por completar e incidencias. Despliega Ver archivos importados para examinar cada resultado y utiliza Ver en Zotero. Detener conserva lo ya importado. Esta importación no utiliza la API de IA; el reconocimiento puede depender de los servicios de Zotero.\n\nEl menú Colección de destino muestra todas tus bibliotecas personales y de grupo. Las colecciones de bibliotecas de Solo lectura o Sin permiso para añadir archivos aparecen visibles pero deshabilitadas: el complemento respeta los permisos indicados por Zotero. No es la misma selección que Analizar, donde puedes trabajar con los documentos disponibles para lectura. Si acabas de cambiar carpetas o permisos, pulsa Actualizar colecciones.\n\nCuando una biblioteca no tiene colecciones, el menú lo indica. Crea la colección en Zotero si tus permisos lo permiten y actualiza la lista. Las carpetas eliminadas no son destinos válidos."
     },
     {
       "id": "lectura",

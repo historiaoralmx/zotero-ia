@@ -6,21 +6,26 @@
   const element = (tag, text) => {const e = document.createElementNS("http://www.w3.org/1999/xhtml", tag);if (text !== undefined) e.textContent = text;return e;};
   function collections() {
     const previous = Number(select.value);
-    let native = null;
-    try {const pane = Zotero.getActiveZoteroPane();native = pane?.getSelectedCollections?.()[0] || pane?.getSelectedCollection?.();} catch (_) {}
+    let native = null, activeLibraryID = null;
+    try {const pane = Zotero.getActiveZoteroPane();native = pane?.getSelectedCollections?.()[0] || pane?.getSelectedCollection?.();activeLibraryID = pane?.getSelectedLibraryID?.() || native?.libraryID;} catch (_) {}
     const wanted = previous || native?.id;
     select.replaceChildren();
     const placeholder = element("option", "Elige la colección de destino");placeholder.value = "";select.appendChild(placeholder);
-    for (const library of Zotero.Libraries.getAll().filter(l => ["user", "group"].includes(l.libraryType) && l.editable !== false && l.filesEditable !== false)) {
-      const group = element("optgroup");group.label = library.name || Zotero.Libraries.getName(library.libraryID);
-      for (const c of Zotero.Collections.getByLibrary(library.libraryID, true).filter(c => !c.deleted)) {
-        const path = [c.name], seen = new Set([c.id]);let parent = c.parentID;
-        while (parent && !seen.has(parent)) {seen.add(parent);const p = Zotero.Collections.get(parent);if (!p) break;path.unshift(p.name);parent = p.parentID;}
-        const option = element("option", path.join(" / "));option.value = String(c.id);group.appendChild(option);
+    const destinations = ZIA.localImports.destinations();
+    for (const library of destinations) {
+      const group = element("optgroup");group.label = library.name + (library.reason ? " · " + library.reason : "");
+      for (const c of library.collections) {
+        const option = element("option", c.path);option.value = String(c.id);option.disabled = !library.canImport;group.appendChild(option);
       }
+      if (!library.collections.length) {const empty = element("option", "Sin colecciones de destino" + (library.reason ? " · " + library.reason : "; crea una colección en Zotero y pulsa Actualizar colecciones"));empty.value = "";empty.disabled = true;group.appendChild(empty);}
       select.appendChild(group);
     }
-    select.value = [...select.options].some(o => Number(o.value) === wanted) ? String(wanted) : "";
+    select.value = [...select.options].some(o => !o.disabled && Number(o.value) === wanted) ? String(wanted) : "";
+    const active = destinations.find(l => l.collections.some(c => c.id === wanted)) || destinations.find(l => l.libraryID === activeLibraryID);
+    const blocked = destinations.filter(l => !l.canImport);
+    const hint = $("import-permission-hint");
+    hint.textContent = active && !active.canImport ? "«" + active.name + "»: " + active.reason + ". Por eso sus destinos aparecen deshabilitados para importar. Para leer o analizar sus documentos, ve a Analizar." : blocked.length ? "Los destinos deshabilitados indican que Zotero no permite añadir archivos en esa biblioteca. Sus documentos disponibles pueden consultarse desde Analizar." : "";
+    hint.hidden = !hint.textContent;
   }
   async function choose(folder) {
     const C = Components.classes, I = Components.interfaces;
@@ -64,6 +69,7 @@
     if (busy) {status.textContent = "Termina o detén la tarea actual antes de importar.";return;}
     const id = Number(select.value), c = Zotero.Collections.get(id);
     if (!c || c.deleted) {status.textContent = "Elige una colección de destino. Si acabas de crearla, pulsa Actualizar colecciones.";return;}
+    try {ZIA.localImports.validateDestination(id);} catch (error) {status.textContent = error.message;collections();return;}
     const destinationKey = c.key, fallbackType = $("import-type").value || "document";
     const controller = new AbortController();ctrl = controller;busy = true;
     for (const node of [fileButton, folderButton, select, $("import-refresh"), $("import-type")]) node.disabled = true;
