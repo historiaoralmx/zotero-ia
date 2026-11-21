@@ -1,8 +1,8 @@
-ZOTERO IA 1.9.28 — HECHO POR HUMANISTYC
+ZOTERO IA 1.9.29 — HECHO POR HUMANISTYC
 
 INSTALACIÓN Y ACTUALIZACIONES
 En Zotero abre Herramientas → Complementos (o Plugins), usa el engranaje →
-Instalar complemento desde archivo y selecciona zotero-ia-1.9.28.xpi.
+Instalar complemento desde archivo y selecciona zotero-ia-1.9.29.xpi.
 Instálalo sobre la versión anterior y vuelve a abrir Zotero IA. Si Zotero pide
 reiniciar, acepta. Se conservan el identificador del complemento, las preferencias,
 los proyectos y las tareas existentes.
@@ -402,3 +402,12 @@ Se ha retirado la función de voz: botones, permisos, grabador y envío de audio
 Escribe la instrucción y pulsa Enviar o Enter. Ya no hay solicitudes de transcripción
 ni consumo por audio desde el plugin. Las consultas escritas y los análisis siguen
 utilizando la API configurada y consumen los tokens correspondientes.
+
+BIBLIOTECAS DE GRUPO EN AGREGAR DOCUMENTOS
+El selector muestra las bibliotecas personales y de grupo. Si Zotero no permite
+editar la biblioteca o añadir archivos, sus colecciones aparecen deshabilitadas
+con el motivo: Solo lectura o Sin permiso para añadir archivos. El complemento
+no cambia esos permisos. Para analizar documentos ya accesibles usa Analizar.
+Si una biblioteca no tiene colecciones, crea una en Zotero cuando tus permisos
+lo permitan y pulsa Actualizar colecciones. El selector vuelve a comprobar
+las colecciones y los permisos cada vez que se actualiza.

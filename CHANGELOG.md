@@ -1,3 +1,10 @@
+## 1.9.29 — Bibliotecas de grupo visibles al importar
+
+- El selector de destinos muestra todas las bibliotecas personales y de grupo disponibles, incluidas las que solo permiten lectura o no permiten añadir archivos.
+- Los destinos sin permisos se mantienen visibles y deshabilitados con el motivo. No modifica ni elude los permisos de Zotero.
+- Explica la diferencia entre importar archivos y analizar documentos ya disponibles. Las bibliotecas vacías muestran un aviso en lugar de un encabezado sin opciones.
+- Actualizar colecciones vuelve a comprobar las carpetas y permisos; valida el destino antes de abrir el selector de archivos y antes de copiar.
+
 ## 1.9.28 — Canal de actualizaciones automáticas
 
 - Activa el canal estable oficial mediante el actualizador nativo de Zotero y los assets de GitHub Releases; no añade procesos ni consultas de IA.

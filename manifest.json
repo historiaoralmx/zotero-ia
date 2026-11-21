@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Zotero IA",
-  "version": "1.9.28",
+  "version": "1.9.29",
   "description": "Investigación con evidencias, matrices exportables, tareas reanudables y cambios reversibles",
   "author": "Humanistyc",
   "applications": {

@@ -26,7 +26,7 @@ Comprobación y empaquetado local, sin dependencias externas:
 
 ```sh
 python3 -m unittest test_release -v
-python3 build_release.py --tag v1.9.28 --output dist
+python3 build_release.py --tag v1.9.29 --output dist
 ```
 
 Consulta [LEEME.txt](LEEME.txt) para conocer la configuración y el uso, y [CHANGELOG.md](CHANGELOG.md) para revisar los cambios por versión.

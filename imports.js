@@ -1,11 +1,13 @@
 /* global Zotero, ZoteroIA */
 (function (Z) {
   "use strict";
+  const permission = library => !library ? "Biblioteca no disponible" : library.editable === false ? "Solo lectura" : library.filesEditable === false ? "Sin permiso para añadir archivos" : "";
   const destination = (id, key) => {
     const c = Zotero.Collections.get(Number(id));
     if (!c || c.deleted || (key && c.key !== key)) throw Error("La colección de destino cambió o ya no está disponible.");
     const lib = Zotero.Libraries.get(c.libraryID);
-    if (!lib || lib.editable === false || lib.filesEditable === false) throw Error("Esta biblioteca no permite importar archivos.");
+    const reason = permission(lib);
+    if (reason) throw Error("Esta biblioteca no permite importar archivos: " + reason + ". Puedes consultar sus documentos desde Analizar si están disponibles en Zotero.");
     return c;
   };
   async function makeParent(attachment, c, type, name) {
@@ -32,6 +34,18 @@
     }
   }
   Z.localImports = {
+    validateDestination: destination,
+    destinations() {
+      return Zotero.Libraries.getAll().filter(l => ["user", "group"].includes(l.libraryType)).map(library => {
+        const reason = permission(library);
+        const collections = Zotero.Collections.getByLibrary(library.libraryID, true).filter(c => !c.deleted && c.libraryID === library.libraryID).map(c => {
+          const path = [c.name], seen = new Set([c.id]);let parent = c.parentID;
+          while (parent && !seen.has(parent)) {seen.add(parent);const p = Zotero.Collections.get(parent);if (!p || p.libraryID !== library.libraryID || p.deleted) break;path.unshift(p.name);parent = p.parentID;}
+          return {id: c.id, name: c.name, path: path.join(" / ")};
+        });
+        return {libraryID: library.libraryID, name: library.name || Zotero.Libraries.getName(library.libraryID), canImport: !reason, reason, collections};
+      });
+    },
     async importFiles(files, {collectionID, fallbackType = "document", signal, onProgress = () => {}} = {}) {
       Z.checkAbort(signal);
       const c = destination(collectionID), original = {id: c.id, key: c.key, libraryID: c.libraryID};
